@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>F95Zone BBCode Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:          #060a10;
+      --surface:     #0d1420;
+      --surface2:    #111c2e;
+      --surface3:    #162035;
+      --input-bg:    #0a1018;
+      --border:      #1c2a3e;
+      --border-hi:   #253549;
+      --accent:      #07c0d8;
+      --accent-dim:  rgba(7,192,216,0.12);
+      --accent-glow: rgba(7,192,216,0.08);
+      --amber:       #f5a623;
+      --amber-dim:   rgba(245,166,35,0.12);
+      --green:       #22c55e;
+      --red:         #ef4444;
+      --text:        #d8e4f0;
+      --text-dim:    #7a94b0;
+      --text-faint:  #3d556e;
+      --font-ui:     'Oxanium', sans-serif;
+      --font-body:   'DM Sans', sans-serif;
+      --font-mono:   'JetBrains Mono', monospace;
+      --radius:      6px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 13px;
+      height: 100vh;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── APP SHELL ───────────────────────────────────────── */
+    .app { display: flex; flex-direction: column; height: 100vh; }
+
+    /* ─── HEADER ──────────────────────────────────────────── */
+    .app-header {
+      display: flex; align-items: center; gap: 14px;
+      padding: 0 24px; height: 50px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .logo {
+      font-family: var(--font-ui); font-size: 17px; font-weight: 700;
+      letter-spacing: .08em; color: var(--accent);
+    }
+    .logo em { color: var(--text-dim); font-style: normal; font-weight: 400; }
+    .header-badge {
+      font-family: var(--font-mono); font-size: 10px;
+      color: var(--text-faint); background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 3px;
+      padding: 2px 7px; letter-spacing: .06em;
+    }
+
+    /* ─── TAB BAR ─────────────────────────────────────────── */
+    .tab-bar {
+      display: flex; align-items: flex-end;
+      padding: 0 24px; height: 44px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0; gap: 2px;
+    }
+    .tab-btn {
+      font-family: var(--font-ui); font-size: 12px; font-weight: 600;
+      letter-spacing: .08em; text-transform: uppercase;
+      padding: 10px 18px; border: none; background: transparent;
+      color: var(--text-faint); cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color .15s, border-color .15s;
+    }
+    .tab-btn:hover { color: var(--text-dim); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ─── MAIN LAYOUT ─────────────────────────────────────── */
+    .main { display: flex; flex: 1; overflow: hidden; }
+
+    /* ─── FORM PANEL ──────────────────────────────────────── */
+    .form-panel {
+      flex: 0 0 56%; overflow-y: auto;
+      padding: 20px 22px; border-right: 1px solid var(--border);
+    }
+    .form-panel::-webkit-scrollbar { width: 3px; }
+    .form-panel::-webkit-scrollbar-track { background: transparent; }
+    .form-panel::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ─── SECTIONS ────────────────────────────────────────── */
+    .section {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); margin-bottom: 14px;
+    }
+    .section-head {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 14px; background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      border-radius: var(--radius) var(--radius) 0 0;
+      font-family: var(--font-ui); font-size: 11px; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase; color: var(--accent);
+    }
+    .section-body { border-radius: 0 0 var(--radius) var(--radius); }
+    .section-head .ico { font-size: 13px; opacity: .7; }
+    .section-body { padding: 14px; }
+
+    /* ─── FIELD ───────────────────────────────────────────── */
+    .row { display: flex; gap: 10px; margin-bottom: 10px; }
+    .row:last-child { margin-bottom: 0; }
+    .field { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+    .field.w2 { flex: 2; }
+    .label {
+      font-size: 10px; font-weight: 500; letter-spacing: .07em;
+      text-transform: uppercase; color: var(--text-faint);
+    }
+
+    input[type="text"], input[type="date"], select, textarea {
+      background: var(--input-bg); border: 1px solid var(--border);
+      border-radius: 4px; color: var(--text);
+      font-family: var(--font-body); font-size: 13px;
+      padding: 6px 10px; outline: none; width: 100%;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    input[type="text"]:focus, input[type="date"]:focus,
+    select:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-dim);
+    }
+    textarea { resize: vertical; min-height: 72px; line-height: 1.55; }
+    select { cursor: pointer; }
+    select option { background: var(--surface2); }
+    input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(.4); }
+
+    /* ─── CHECKBOXES ──────────────────────────────────────── */
+    .check-group { display: flex; flex-wrap: wrap; gap: 8px; }
+    .check-item {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 12px; color: var(--text-dim); cursor: pointer;
+      user-select: none;
+    }
+    .check-item input[type="checkbox"] { accent-color: var(--accent); width: 13px; height: 13px; }
+
+    /* ─── OPTIONAL TOGGLE CHIPS ───────────────────────────── */
+    .opt-row {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px;
+    }
+    .opt-chip {
+      font-family: var(--font-ui); font-size: 10px; font-weight: 600;
+      letter-spacing: .07em; text-transform: uppercase;
+      padding: 4px 10px; border-radius: 4px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text-faint); cursor: pointer;
+      transition: all .15s;
+    }
+    .opt-chip:hover { border-color: var(--border-hi); color: var(--text-dim); }
+    .opt-chip.on { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+    .opt-field { display: none; }
+    .opt-field.on { display: flex; }
+
+    /* ─── TAG INPUT ───────────────────────────────────────── */
+    .tag-wrap {
+      background: var(--input-bg); border: 1px solid var(--border);
+      border-radius: 4px; padding: 5px 8px;
+      display: flex; flex-wrap: wrap; gap: 4px; min-height: 38px;
+      cursor: text; position: relative;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .tag-wrap:focus-within {
+      border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim);
+    }
+    .tag-chip {
+      display: flex; align-items: center; gap: 3px;
+      background: var(--accent-dim); border: 1px solid rgba(7,192,216,.25);
+      color: var(--accent); font-size: 11px; font-weight: 500;
+      padding: 2px 7px; border-radius: 3px;
+    }
+    .tag-x { cursor: pointer; font-size: 14px; opacity: .6; line-height: 1; }
+    .tag-x:hover { opacity: 1; }
+    .tag-input-field {
+      background: transparent; border: none; outline: none;
+      color: var(--text); font-family: var(--font-body); font-size: 13px;
+      flex: 1; min-width: 120px; padding: 2px 3px;
+    }
+    .tag-drop {
+      position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); max-height: 180px; overflow-y: auto;
+      z-index: 200; display: none;
+      box-shadow: 0 8px 24px rgba(0,0,0,.5);
+    }
+    .tag-drop.open { display: block; }
+    .tag-drop::-webkit-scrollbar { width: 3px; }
+    .tag-drop::-webkit-scrollbar-thumb { background: var(--border-hi); }
+    .tag-opt {
+      padding: 6px 12px; font-size: 12px; cursor: pointer;
+      color: var(--text-dim); transition: background .1s;
+    }
+    .tag-opt:hover, .tag-opt.hi { background: var(--surface3); color: var(--text); }
+
+    /* ─── DYNAMIC ROWS (links / mirrors) ─────────────────── */
+    .dyn-list { display: flex; flex-direction: column; gap: 6px; }
+    .dyn-item { display: flex; gap: 6px; align-items: center; }
+    .dyn-item select { flex: 0 0 120px; }
+    .dyn-item input { flex: 1; }
+    .icon-btn {
+      width: 28px; height: 28px; flex-shrink: 0;
+      border: 1px solid var(--border); border-radius: 4px;
+      background: transparent; color: var(--text-faint);
+      cursor: pointer; font-size: 16px; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .15s;
+    }
+    .icon-btn:hover { border-color: var(--red); color: var(--red); }
+    .add-btn {
+      font-family: var(--font-body); font-size: 11px; font-weight: 500;
+      color: var(--accent); background: transparent;
+      border: 1px dashed var(--border-hi); border-radius: 4px;
+      padding: 5px 12px; cursor: pointer; width: 100%;
+      transition: all .15s; margin-top: 4px;
+    }
+    .add-btn:hover { border-color: var(--accent); background: var(--accent-glow); }
+
+    /* ─── OUTPUT PANEL ────────────────────────────────────── */
+    .output-panel {
+      flex: 1; display: flex; flex-direction: column; overflow: hidden;
+    }
+    .output-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 16px; height: 44px;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .output-label {
+      display: flex; align-items: center; gap: 7px;
+      font-family: var(--font-ui); font-size: 11px; font-weight: 600;
+      letter-spacing: .1em; text-transform: uppercase; color: var(--text-faint);
+    }
+    .pulse {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+      box-shadow: 0 0 6px var(--accent);
+    }
+    .bar-actions { display: flex; gap: 6px; }
+    .btn {
+      font-family: var(--font-ui); font-size: 11px; font-weight: 700;
+      letter-spacing: .08em; text-transform: uppercase;
+      padding: 6px 14px; border-radius: 4px; cursor: pointer;
+      border: 1px solid; transition: all .15s;
+    }
+    .btn-primary { background: var(--accent); border-color: var(--accent); color: #03080f; }
+    .btn-primary:hover { background: #22d3ee; border-color: #22d3ee; }
+    .btn-ghost { background: transparent; border-color: var(--border-hi); color: var(--text-dim); }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-success { background: var(--green); border-color: var(--green); color: #fff; }
+    .btn-warn { background: transparent; border-color: var(--amber); color: var(--amber); }
+    .btn-warn:hover { background: var(--amber-dim); }
+
+    .output-area {
+      flex: 1; width: 100%; background: var(--input-bg);
+      color: #8fb4d0; font-family: var(--font-mono); font-size: 11.5px;
+      line-height: 1.75; border: none; padding: 16px; resize: none; outline: none;
+    }
+    .output-area::selection { background: var(--accent-dim); }
+
+    /* ─── DIVIDER ─────────────────────────────────────────── */
+    hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+
+    /* ─── PLATFORM BLOCKS ─────────────────────────────────── */
+    .platform-block { margin-bottom: 14px; }
+    .platform-block:last-child { margin-bottom: 0; }
+    .platform-label {
+      font-family: var(--font-ui); font-size: 11px; font-weight: 700;
+      letter-spacing: .07em; text-transform: uppercase;
+      color: var(--text-dim); margin-bottom: 7px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <span class="logo">F95<em>Zone</em> BBCode</span>
+    <span class="header-badge">Template Generator</span>
+  </header>
+
+  <!-- TAB BAR -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="game">&#x1F3AE; Game</button>
+    <button class="tab-btn" data-tab="animation">&#x1F3AC; Animation</button>
+    <button class="tab-btn" data-tab="comic">&#x1F4D6; Comic / Stills</button>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- FORM PANEL -->
+    <div class="form-panel">
+
+      <!-- ═══════════ GAME TAB ═══════════ -->
+      <div id="tab-game" class="tab-content active">
+
+        <!-- Cover & Overview -->
+        <div class="section">
+          <div class="section-head"><span class="ico">🖼</span> Cover Art &amp; Overview</div>
+          <div class="section-body">
+            <div class="row">
+              <div class="field">
+                <div class="label">Overview</div>
+                <textarea id="g-overview" rows="4" placeholder="Game description / story overview…"></textarea>
+              </div>
+            </div>
+            <div class="row">
+              <label class="check-item">
+                <input type="checkbox" id="g-overview-spoiler"> Wrap overview in spoiler tag
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Info Fields -->
+        <div class="section">
+          <div class="section-head"><span class="ico">ℹ</span> Information</div>
+          <div class="section-body">
+
+            <!-- Optional toggles -->
+            <div class="opt-row" id="g-opt-row">
+              <button class="opt-chip" data-opt="g-orig-title">Original Title</button>
+              <button class="opt-chip" data-opt="g-aliases">Aliases</button>
+              <button class="opt-chip" data-opt="g-publisher">Publisher</button>
+              <button class="opt-chip" data-opt="g-vndb">VNDB</button>
+              <button class="opt-chip" data-opt="g-length">Length</button>
+              <button class="opt-chip" data-opt="g-prequel">Prequel</button>
+              <button class="opt-chip" data-opt="g-sequel">Sequel</button>
+              <button class="opt-chip" data-opt="g-voices">Voices</button>
+              <button class="opt-chip" data-opt="g-store">Store</button>
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <div class="label">Thread Updated</div>
+                <input type="date" id="g-updated">
+              </div>
+              <div class="field">
+                <div class="label">Release Date</div>
+                <input type="date" id="g-release">
+              </div>
+            </div>
+
+            <div class="row opt-field" id="g-orig-title">
+              <div class="field"><div class="label">Original Title</div><input type="text" id="g-orig-title-val" placeholder="Japanese original title"></div>
+            </div>
+            <div class="row opt-field" id="g-aliases">
+              <div class="field"><div class="label">Aliases</div><input type="text" id="g-aliases-val" placeholder="Romaji or alternate titles"></div>
+            </div>
+
+            <!-- Developer links -->
+            <div class="row">
+              <div class="field">
+                <div class="label">Developer Name</div>
+                <input type="text" id="g-dev-name" placeholder="Developer or studio name">
+              </div>
+            </div>
+            <div class="row">
+              <div class="field">
+                <div class="label">Developer Links</div>
+                <div class="dyn-list" id="g-dev-links"></div>
+                <button class="add-btn" onclick="addDevLink('g-dev-links')">+ Add Link</button>
+              </div>
+            </div>
+
+            <div class="row opt-field" id="g-publisher">
+              <div class="field"><div class="label">Publisher</div><input type="text" id="g-publisher-val" placeholder="Leave blank if self-published"></div>
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <div class="label">Censored</div>
+                <select id="g-censored">
+                  <option value="No">No</option>
+                  <option value="Yes">Yes</option>
+                  <option value="Partial">Partial</option>
+                  <option value="No (patch available)">No (patch available)</option>
+                </select>
+              </div>
+              <div class="field">
+                <div class="label">Version</div>
+                <input type="text" id="g-version" placeholder="e.g. v0.1 Beta">
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <div class="label">OS</div>
+                <div class="check-group">
+                  <label class="check-item"><input type="checkbox" name="g-os" value="Windows" checked> Windows</label>
+                  <label class="check-item"><input type="checkbox" name="g-os" value="Linux"> Linux</label>
+                  <label class="check-item"><input type="checkbox" name="g-os" value="Mac"> Mac</label>
+                  <label class="check-item"><input type="checkbox" name="g-os" value="Android"> Android</label>
+                  <label class="check-item"><input type="checkbox" name="g-os" value="iOS"> iOS</label>
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <div class="label">Language</div>
+                <div class="tag-wrap" id="g-lang-wrap">
+                  <input class="tag-input-field" id="g-lang-input" placeholder="Search language…" autocomplete="off">
+                  <div class="tag-drop" id="g-lang-drop"></div>
+                </div>
+              </div>
+              <div class="field opt-field on" id="g-vndb" style="display:flex">
+                <div class="label">VNDB</div>
+                <input type="text" id="g-vndb-val" placeholder="e.g. v12345 or full URL">
+              </div>
+            </div>
+
+            <div class="row opt-field" id="g-length">
+              <div class="field"><div class="label">Length</div><input type="text" id="g-length-val" placeholder="e.g. Short (2-10 hours)"></div>
+            </div>
+            <div class="row opt-field" id="g-prequel">
+              <div class="field"><div class="label">Prequel</div><input type="text" id="g-prequel-val" placeholder="Prequel title or thread link"></div>
+            </div>
+            <div class="row opt-field" id="g-sequel">
+              <div class="field"><div class="label">Sequel</div><input type="text" id="g-sequel-val" placeholder="Sequel title or thread link"></div>
+            </div>
+            <div class="row opt-field" id="g-voices">
+              <div class="field">
+                <div class="label">Voices</div>
+                <div class="tag-wrap" id="g-voices-wrap">
+                  <input class="tag-input-field" id="g-voices-input" placeholder="Search language…" autocomplete="off">
+                  <div class="tag-drop" id="g-voices-drop"></div>
+                </div>
+              </div>
+            </div>
+            <div class="row opt-field" id="g-store">
+              <div class="field"><div class="label">Store</div><input type="text" id="g-store-val" placeholder="e.g. Steam, DLsite"></div>
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <div class="label">Genre Tags</div>
+                <div class="tag-wrap" id="g-tags-wrap">
+                  <input class="tag-input-field" id="g-tags-input" placeholder="Type to search tags…" autocomplete="off">
+                  <div class="tag-drop" id="g-tags-drop"></div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Text Blocks -->
+        <div class="section">
+          <div class="section-head"><span class="ico">📝</span> Text Blocks</div>
+          <div class="section-body">
+            <div class="row">
+              <div class="field">
+                <div class="label">Installation</div>
+                <textarea id="g-install" rows="3">1. Extract and run.</textarea>
+              </div>
+            </div>
+            <div class="row">
+              <div class="field">
+                <div class="label">Changelog</div>
+                <textarea id="g-changelog" rows="3" placeholder="v0.1 Initial Release"></textarea>
+              </div>
+            </div>
+            <div class="row">
+              <div class="field">
+                <div class="label">Developer Notes <span style="color:var(--text-faint);font-style:italic;font-size:10px">(optional)</span></div>
+                <textarea id="g-devnotes" rows="2" placeholder="Leave blank to omit this block"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Downloads -->
+        <div class="section">
+          <div class="section-head"><span class="ico">⬇</span> Downloads</div>
+          <div class="section-body">
+            <div id="g-dl-platforms">
+              <!-- Win -->
+              <div class="platform-block">
+                <div class="platform-label">Windows
+                  <button class="add-btn" style="width:auto;margin-top:0;padding:3px 10px" onclick="addMirror('g-dl-win')">+ Mirror</button>
+                </div>
+                <div class="dyn-list" id="g-dl-win"></div>
+              </div>
+              <!-- Linux -->
+              <div class="platform-block">
+                <div class="platform-label">Linux
+                  <button class="add-btn" style="width:auto;margin-top:0;padding:3px 10px" onclick="addMirror('g-dl-linux')">+ Mirror</button>
+                </div>
+                <div class="dyn-list" id="g-dl-linux"></div>
+              </div>
+              <!-- Mac -->
+              <div class="platform-block">
+                <div class="platform-label">Mac
+                  <button class="add-btn" style="width:auto;margin-top:0;padding:3px 10px" onclick="addMirror('g-dl-mac')">+ Mirror</button>
+                </div>
+                <div class="dyn-list" id="g-dl-mac"></div>
+              </div>
+              <!-- Android / Others -->
+              <div class="platform-block">
+                <div class="platform-label">Android / Others
+                  <button class="add-btn" style="width:auto;margin-top:0;padding:3px 10px" onclick="addMirror('g-dl-others')">+ Mirror</button>
+                </div>
+                <div class="dyn-list" id="g-dl-others"></div>
+              </div>
+              <!-- Patches -->
+              <div class="platform-block">
+                <div class="platform-label">Patches
+                  <button class="add-btn" style="width:auto;margin-top:0;padding:3px 10px" onclick="addMirror('g-dl-patches')">+ Mirror</button>
+                </div>
+                <div class="dyn-list" id="g-dl-patches"></div>
+              </div>
+              <!-- Extras -->
+              <div class="platform-block">
+                <div class="platform-label">Extras
+                  <button class="add-btn" style="width:auto;margin-top:0;padding:3px 10px" onclick="addMirror('g-dl-extras')">+ Mirror</button>
+                </div>
+                <div class="dyn-list" id="g-dl-extras"></div>
+              </div>
+            </div>
+
+            <hr>
+            <div class="row">
+              <div class="field">
+                <div class="label">Thank You Notes <span style="color:var(--text-faint);font-style:italic;font-size:10px">(optional)</span></div>
+                <input type="text" id="g-thanks" placeholder='e.g. Thank you @Username for sharing the game'>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /tab-game -->
+
+
+      <!-- ═══════════ ANIMATION TAB ═══════════ -->
+      <div id="tab-animation" class="tab-content">
+
+        <div class="section">
+          <div class="section-head"><span class="ico">🖼</span> Cover Art &amp; Overview</div>
+          <div class="section-body">
+            <div class="row">
+              <div class="field">
+                <div class="label">Overview / Description</div>
+                <textarea id="a-overview" rows="3" placeholder="NAME is a 2D/3D artist who makes short/long animations…"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-head"><span class="ico">ℹ</span> Information</div>
+          <div class="section-body">
+            <div class="row">
+              <div class="field"><div class="label">Updated</div><input type="date" id="a-updated"></div>
+            </div>
+            <div class="row">
+              <div class="field"><div class="label">Artist Name</div><input type="text" id="a-artist" placeholder="Artist or studio name"></div>
+            </div>
+            <div class="row">
+              <div class="field">
+                <div class="label">Artist Links</div>
+                <div class="dyn-list" id="a-links"></div>
+                <button class="add-btn" onclick="addDevLink('a-links', true)">+ Add Link</button>
+              </div>
+            </div>
+            <div class="row">
+              <div class="field">
+                <div class="label">Censorship</div>
+                <select id="a-censored">
+                  <option value="No">No</option>
+                  <option value="Yes">Yes</option>
+                  <option value="Partial (Mosaic)">Partial (Mosaic)</option>
+                </select>
+              </div>
+              <div class="field">
+                <div class="label">Language</div>
+                <div class="tag-wrap" id="a-lang-wrap">
+                  <input class="tag-input-field" id="a-lang-input" placeholder="Search language…" autocomplete="off">
+                  <div class="tag-drop" id="a-lang-drop"></div>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="field"><div class="label">Resolution</div><input type="text" id="a-res" placeholder="e.g. 1920x1080"></div>
+              <div class="field"><div class="label">Files (count)</div><input type="text" id="a-files" placeholder="e.g. 12 Animations"></div>
+            </div>
+            <div class="row">
+              <div class="field"><div class="label">Average Length</div><input type="text" id="a-length" placeholder="e.g. 00:30 - 02:00 min"></div>
+            </div>
+            <div class="row">
+              <div class="field">
+                <div class="label">Genre Tags</div>
+                <div class="tag-wrap" id="a-tags-wrap">
+                  <input class="tag-input-field" id="a-tags-input" placeholder="Type to search tags…" autocomplete="off">
+                  <div class="tag-drop" id="a-tags-drop"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-head"><span class="ico">📝</span> Text Blocks</div>
+          <div class="section-body">
+            <div class="row">
+              <div class="field"><div class="label">Installation</div>
+                <textarea id="a-install" rows="3">1- Extract to desired location.
+2- Open .mp4/avi/mkv/mov with desired video software.</textarea>
+              </div>
+            </div>
+            <div class="row">
+              <div class="field"><div class="label">Changelog <span style="color:var(--text-faint);font-style:italic;font-size:10px">(collections only, leave blank to omit)</span></div>
+                <textarea id="a-changelog" rows="2" placeholder="Leave blank for single/first release"></textarea>
+              </div>
+            </div>
+            <div class="row">
+              <div class="field"><div class="label">Collection List <span style="color:var(--text-faint);font-style:italic;font-size:10px">(optional)</span></div>
+                <textarea id="a-collection" rows="3" placeholder="ANIMATION A - link&#10;ANIMATION B - link"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-head"><span class="ico">⬇</span> Downloads</div>
+          <div class="section-body">
+            <div class="platform-block">
+              <div class="platform-label">Download Links
+                <button class="add-btn" style="width:auto;margin-top:0;padding:3px 10px" onclick="addMirror('a-dl')">+ Mirror</button>
+              </div>
+              <div class="dyn-list" id="a-dl"></div>
+            </div>
+            <hr>
+            <div class="row">
+              <div class="field"><div class="label">Thank You Notes <span style="color:var(--text-faint);font-style:italic;font-size:10px">(optional)</span></div>
+                <input type="text" id="a-thanks" placeholder="Thank you @Username for sharing…">
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /tab-animation -->
+
+
+      <!-- ═══════════ COMIC TAB ═══════════ -->
+      <div id="tab-comic" class="tab-content">
+
+        <div class="section">
+          <div class="section-head"><span class="ico">🖼</span> Cover Art &amp; Overview</div>
+          <div class="section-body">
+            <div class="row">
+              <div class="field"><div class="label">Overview / Description</div>
+                <textarea id="c-overview" rows="3" placeholder="NAME is a 2D/3D artist who makes comics/pinups…"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-head"><span class="ico">ℹ</span> Information</div>
+          <div class="section-body">
+            <div class="row">
+              <div class="field"><div class="label">Updated</div><input type="date" id="c-updated"></div>
+            </div>
+            <div class="row">
+              <div class="field"><div class="label">Artist Name</div><input type="text" id="c-artist" placeholder="Artist or studio name"></div>
+            </div>
+            <div class="row">
+              <div class="field">
+                <div class="label">Artist Links</div>
+                <div class="dyn-list" id="c-links"></div>
+                <button class="add-btn" onclick="addDevLink('c-links', true)">+ Add Link</button>
+              </div>
+            </div>
+            <div class="row">
+              <div class="field">
+                <div class="label">Censorship</div>
+                <select id="c-censored">
+                  <option value="No">No</option>
+                  <option value="Yes">Yes</option>
+                  <option value="Partial (Mosaic)">Partial (Mosaic)</option>
+                </select>
+              </div>
+              <div class="field">
+                <div class="label">Language</div>
+                <div class="tag-wrap" id="c-lang-wrap">
+                  <input class="tag-input-field" id="c-lang-input" placeholder="Search language…" autocomplete="off">
+                  <div class="tag-drop" id="c-lang-drop"></div>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="field"><div class="label">Resolution</div><input type="text" id="c-res" placeholder="e.g. 1280x1808"></div>
+              <div class="field"><div class="label">Pages</div><input type="text" id="c-pages" placeholder="e.g. 42 pictures"></div>
+            </div>
+            <div class="row">
+              <div class="field">
+                <div class="label">Genre Tags</div>
+                <div class="tag-wrap" id="c-tags-wrap">
+                  <input class="tag-input-field" id="c-tags-input" placeholder="Type to search tags…" autocomplete="off">
+                  <div class="tag-drop" id="c-tags-drop"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-head"><span class="ico">📝</span> Text Blocks</div>
+          <div class="section-body">
+            <div class="row">
+              <div class="field"><div class="label">Installation</div>
+                <textarea id="c-install" rows="2">1- Extract to desired location.
+2- Open .jpg/png with desired image software or convert to .cbr for CBR readers.</textarea>
+              </div>
+            </div>
+            <div class="row">
+              <div class="field"><div class="label">Changelog <span style="color:var(--text-faint);font-style:italic;font-size:10px">(collections only)</span></div>
+                <textarea id="c-changelog" rows="2" placeholder="Leave blank for single/first release"></textarea>
+              </div>
+            </div>
+            <div class="row">
+              <div class="field"><div class="label">Collection List <span style="color:var(--text-faint);font-style:italic;font-size:10px">(optional)</span></div>
+                <textarea id="c-collection" rows="3" placeholder="COMIC A - link&#10;COMIC B - link"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-head"><span class="ico">⬇</span> Downloads</div>
+          <div class="section-body">
+            <div class="platform-block">
+              <div class="platform-label">Download Links
+                <button class="add-btn" style="width:auto;margin-top:0;padding:3px 10px" onclick="addMirror('c-dl')">+ Mirror</button>
+              </div>
+              <div class="dyn-list" id="c-dl"></div>
+            </div>
+            <hr>
+            <div class="row">
+              <div class="field"><div class="label">Thank You Notes <span style="color:var(--text-faint);font-style:italic;font-size:10px">(optional)</span></div>
+                <input type="text" id="c-thanks" placeholder="Thank you @Username for sharing…">
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /tab-comic -->
+
+    </div><!-- /form-panel -->
+
+    <!-- OUTPUT PANEL -->
+    <div class="output-panel">
+      <div class="output-bar">
+        <div class="output-label"><span class="pulse"></span>BBCode Output</div>
+        <div class="bar-actions">
+          <button class="btn btn-warn" onclick="clearAll()">Clear All</button>
+          <button class="btn btn-ghost" id="clearBtn" onclick="clearOutput()">Clear</button>
+          <button class="btn btn-ghost" id="copyBtn" onclick="copyOutput()">Copy</button>
+          <button class="btn btn-primary" onclick="generate()">Generate</button>
+        </div>
+      </div>
+      <textarea class="output-area" id="output" readonly placeholder="Fill in the form and click Generate…"></textarea>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+// ═══════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════
+const ALL_TAGS = [
+  // Technical
+  '3D Game','3DCG','2D Game','2DCG','AI CG','Animated','Censored',
+  'Character Creation','Kinetic Novel','Japanese Game','Male Protagonist',
+  'Female Protagonist','Futa/Trans Protagonist','Mobile Game','Multiple Endings',
+  'Multiple Protagonist','Real Porn','Text Based','Virtual Reality','Voiced',
+  // Sexual
+  'Anal Sex','Ahegao','Bdsm','Bestiality','Big Ass','Big Tits','Blackmail',
+  'Bukkake','Cheating','Corruption','Creampie','Dilf','Drugs','Exhibitionism',
+  'Female Domination','Footjob','Furry','Futa/Trans','Gay','Group Sex','Groping',
+  'Handjob','Harem','Humiliation','Incest','Internal View','Interracial',
+  'Lactation','Lesbian','Loli','Male Domination','Masturbation','Milf',
+  'Multiple Penetration','Necrophilia','Netorare','Oral Sex','Pregnancy',
+  'Prostitution','Rape','Scat','Sex Toys','Sexual Harassment','Shota',
+  'Sissification','Slave','Sleep Sex','Spanking','Stripping','Swinging',
+  'Tentacles','Teasing','Titfuck','Transformation','Trap','Urination',
+  'Vaginal Sex','Virgin','Vore','Voyeurism',
+  // Non-Sexual
+  'Adventure','Combat','Cosplay','Dating Sim','Dystopian Setting','Fantasy',
+  'Graphic Violence','Horror','Humor','Management','Mind Control','Monster',
+  'Monster Girl','No Sexual Content','Paranormal','Parody','Platformer',
+  'Point & Click','Possession','PoV','Puzzle','Religion','Romance','Rpg',
+  'Sandbox','School Setting','Sci-fi','Shooter','Side-scroller','Simulator',
+  'Strategy','Superpowers','Trainer','Turn Based Combat','Twins',
+  'Insect','Parasite','Superpowers'
+];
+
+const LANGUAGES = ['English','Japanese','Spanish','German','Italian','Portuguese','Russian'];
+
+const DEV_LINK_TYPES  = ['Patreon','Website','Itch.io','Steam','DLsite','Ci-en','Discord',
+                          'Twitter/X','BuyMeACoffee','Subscribestar','Gumroad','Pixiv','Other'];
+const ARTIST_LINK_TYPES = ['Patreon','Twitter/X','Pixiv','Subscribestar','Gumroad',
+                            'Fanbox','Fantia','Itch.io','Discord','Website','Other'];
+const MIRROR_TYPES    = ['MEGA','GOFILE','PIXELDRAIN','BUZZHEAVIER','WORKUPLOAD','DATANODES',
+                          'MIXDROP','MEDIAFIRE','ANONFILES','RAPIDGATOR','UPLOADED',
+                          'TORRENT','Direct Link','Other'];
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  // Set today's date
+  const today = new Date().toISOString().split('T')[0];
+  ['g-updated','a-updated','c-updated'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = today;
+  });
+
+  // Tab switching
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + tab).classList.add('active');
+    });
+  });
+
+  // Optional field chips
+  document.querySelectorAll('.opt-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const id = chip.dataset.opt;
+      const field = document.getElementById(id);
+      if (!field) return;
+      chip.classList.toggle('on');
+      field.classList.toggle('on');
+    });
+  });
+
+  // VNDB starts visible — mark chip as on
+  const vndbChip = document.querySelector('[data-opt="g-vndb"]');
+  if (vndbChip) vndbChip.classList.add('on');
+
+  // Tag inputs
+  initTagInput('g-tags', 'g-tags-wrap', 'g-tags-input', 'g-tags-drop');
+  initTagInput('a-tags', 'a-tags-wrap', 'a-tags-input', 'a-tags-drop');
+  initTagInput('c-tags', 'c-tags-wrap', 'c-tags-input', 'c-tags-drop');
+
+  // Language pickers
+  initLangPicker('g-lang', 'g-lang-wrap', 'g-lang-input', 'g-lang-drop');
+  initLangPicker('g-voices', 'g-voices-wrap', 'g-voices-input', 'g-voices-drop', false);
+  initLangPicker('a-lang', 'a-lang-wrap', 'a-lang-input', 'a-lang-drop');
+  initLangPicker('c-lang', 'c-lang-wrap', 'c-lang-input', 'c-lang-drop');
+
+  // Pre-add one mirror row per platform
+  addMirror('g-dl-win');
+  addMirror('g-dl-linux');
+  addMirror('g-dl-mac');
+  addDevLink('g-dev-links');
+  addMirror('a-dl');
+  addDevLink('a-links', true);
+  addMirror('c-dl');
+  addDevLink('c-links', true);
+});
+
+// ═══════════════════════════════════════════════════════
+// LANGUAGE PICKER
+// ═══════════════════════════════════════════════════════
+const langState = {};
+
+function initLangPicker(stateKey, wrapId, inputId, dropId, defaultEnglish = true) {
+  langState[stateKey] = defaultEnglish ? ['English'] : [];
+  const wrap  = document.getElementById(wrapId);
+  const input = document.getElementById(inputId);
+  const drop  = document.getElementById(dropId);
+  let hiIdx = -1;
+
+  function renderLang() {
+    wrap.querySelectorAll('.tag-chip').forEach(c => c.remove());
+    langState[stateKey].forEach(lang => {
+      const chip = document.createElement('span');
+      chip.className = 'tag-chip';
+      chip.innerHTML = lang + '<span class="tag-x">×</span>';
+      chip.querySelector('.tag-x').addEventListener('click', () => {
+        langState[stateKey] = langState[stateKey].filter(l => l !== lang);
+        renderLang();
+      });
+      wrap.insertBefore(chip, input);
+    });
+  }
+
+  function showLangDrop(query) {
+    const q = query.toLowerCase().trim();
+    const results = LANGUAGES.filter(l =>
+      (q ? l.toLowerCase().includes(q) : true) && !langState[stateKey].includes(l)
+    );
+    drop.innerHTML = '';
+    hiIdx = -1;
+    if (!results.length) { drop.classList.remove('open'); return; }
+    results.forEach(l => {
+      const el = document.createElement('div');
+      el.className = 'tag-opt';
+      el.textContent = l;
+      el.addEventListener('mousedown', e => { e.preventDefault(); addLang(l); });
+      drop.appendChild(el);
+    });
+    drop.classList.add('open');
+  }
+
+  function addLang(lang) {
+    if (!langState[stateKey].includes(lang)) langState[stateKey].push(lang);
+    input.value = '';
+    drop.classList.remove('open');
+    renderLang();
+    input.focus();
+  }
+
+  input.addEventListener('input', () => showLangDrop(input.value));
+  input.addEventListener('focus', () => showLangDrop(input.value));
+  input.addEventListener('keydown', e => {
+    const opts = drop.querySelectorAll('.tag-opt');
+    if (e.key === 'ArrowDown') { hiIdx = Math.min(hiIdx+1, opts.length-1); opts.forEach((o,i)=>o.classList.toggle('hi',i===hiIdx)); e.preventDefault(); }
+    else if (e.key === 'ArrowUp') { hiIdx = Math.max(hiIdx-1, 0); opts.forEach((o,i)=>o.classList.toggle('hi',i===hiIdx)); e.preventDefault(); }
+    else if (e.key === 'Enter') {
+      if (hiIdx >= 0 && opts[hiIdx]) addLang(opts[hiIdx].textContent);
+      e.preventDefault();
+    }
+    else if (e.key === 'Escape') drop.classList.remove('open');
+    else if (e.key === 'Backspace' && !input.value && langState[stateKey].length) {
+      langState[stateKey].pop(); renderLang();
+    }
+  });
+  input.addEventListener('blur', () => setTimeout(() => drop.classList.remove('open'), 150));
+  wrap.addEventListener('click', () => input.focus());
+
+  renderLang();
+}
+
+// ═══════════════════════════════════════════════════════
+// TAG INPUT
+// ═══════════════════════════════════════════════════════
+const tagState = {};
+
+function initTagInput(stateKey, wrapId, inputId, dropId) {
+  tagState[stateKey] = [];
+  const wrap  = document.getElementById(wrapId);
+  const input = document.getElementById(inputId);
+  const drop  = document.getElementById(dropId);
+  let hiIdx   = -1;
+
+  function render() {
+    // Remove existing chips
+    wrap.querySelectorAll('.tag-chip').forEach(c => c.remove());
+    tagState[stateKey].forEach(tag => {
+      const chip = document.createElement('span');
+      chip.className = 'tag-chip';
+      chip.innerHTML = tag + '<span class="tag-x" data-tag="' + tag + '">×</span>';
+      chip.querySelector('.tag-x').addEventListener('click', () => removeTag(stateKey, tag, stateKey, wrapId, inputId, dropId));
+      wrap.insertBefore(chip, input);
+    });
+  }
+
+  function showDrop(query) {
+    const q = query.toLowerCase().trim();
+    const results = ALL_TAGS.filter(t =>
+      t.toLowerCase().includes(q) && !tagState[stateKey].includes(t)
+    ).slice(0, 30);
+    drop.innerHTML = '';
+    hiIdx = -1;
+    if (!results.length || !q) { drop.classList.remove('open'); return; }
+    results.forEach((t, i) => {
+      const el = document.createElement('div');
+      el.className = 'tag-opt';
+      el.textContent = t;
+      el.addEventListener('mousedown', e => { e.preventDefault(); addTag(t); });
+      drop.appendChild(el);
+    });
+    drop.classList.add('open');
+  }
+
+  function addTag(tag) {
+    if (!tagState[stateKey].includes(tag)) tagState[stateKey].push(tag);
+    input.value = '';
+    drop.classList.remove('open');
+    render();
+    input.focus();
+  }
+
+  input.addEventListener('input', () => showDrop(input.value));
+  input.addEventListener('keydown', e => {
+    const opts = drop.querySelectorAll('.tag-opt');
+    if (e.key === 'ArrowDown') { hiIdx = Math.min(hiIdx+1, opts.length-1); opts.forEach((o,i)=>o.classList.toggle('hi',i===hiIdx)); e.preventDefault(); }
+    else if (e.key === 'ArrowUp') { hiIdx = Math.max(hiIdx-1, 0); opts.forEach((o,i)=>o.classList.toggle('hi',i===hiIdx)); e.preventDefault(); }
+    else if (e.key === 'Enter') {
+      if (hiIdx >= 0 && opts[hiIdx]) { addTag(opts[hiIdx].textContent); }
+      else if (input.value.trim()) { addTag(input.value.trim()); }
+      e.preventDefault();
+    }
+    else if (e.key === 'Escape') { drop.classList.remove('open'); }
+    else if (e.key === 'Backspace' && !input.value && tagState[stateKey].length) {
+      tagState[stateKey].pop(); render();
+    }
+  });
+  input.addEventListener('blur', () => setTimeout(() => drop.classList.remove('open'), 150));
+  wrap.addEventListener('click', () => input.focus());
+}
+
+function removeTag(stateKey, tag) {
+  tagState[stateKey] = tagState[stateKey].filter(t => t !== tag);
+  // Re-init render for that key
+  const wrapIds = { 'g-tags': 'g-tags-wrap', 'a-tags': 'a-tags-wrap', 'c-tags': 'c-tags-wrap' };
+  const inputIds = { 'g-tags': 'g-tags-input', 'a-tags': 'a-tags-input', 'c-tags': 'c-tags-input' };
+  // Just rebuild chips
+  const wrap = document.getElementById(wrapIds[stateKey]);
+  if (!wrap) return;
+  wrap.querySelectorAll('.tag-chip').forEach(c => c.remove());
+  const input = document.getElementById(inputIds[stateKey]);
+  tagState[stateKey].forEach(t => {
+    const chip = document.createElement('span');
+    chip.className = 'tag-chip';
+    chip.innerHTML = t + '<span class="tag-x" data-tag="' + t + '">×</span>';
+    chip.querySelector('.tag-x').addEventListener('click', () => removeTag(stateKey, t));
+    wrap.insertBefore(chip, input);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// DYNAMIC ROWS
+// ═══════════════════════════════════════════════════════
+function addDevLink(listId, isArtist = false) {
+  const list = document.getElementById(listId);
+  if (!list) return;
+  const types = isArtist ? ARTIST_LINK_TYPES : DEV_LINK_TYPES;
+  const item = document.createElement('div');
+  item.className = 'dyn-item';
+  item.innerHTML = `
+    <select>${types.map(t=>`<option>${t}</option>`).join('')}</select>
+    <input type="text" placeholder="https://…">
+    <button class="icon-btn" onclick="this.parentElement.remove()" title="Remove">×</button>
+  `;
+  list.appendChild(item);
+}
+
+function addMirror(listId) {
+  const list = document.getElementById(listId);
+  if (!list) return;
+  const item = document.createElement('div');
+  item.className = 'dyn-item';
+  item.innerHTML = `
+    <select>${MIRROR_TYPES.map(t=>`<option>${t}</option>`).join('')}</select>
+    <input type="text" placeholder="https://…">
+    <button class="icon-btn" onclick="this.parentElement.remove()" title="Remove">×</button>
+  `;
+  list.appendChild(item);
+}
+
+// ═══════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════
+function v(id) {
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+
+function checked(name) {
+  return [...document.querySelectorAll(`input[name="${name}"]:checked`)].map(c => c.value);
+}
+
+function getMirrors(listId) {
+  const list = document.getElementById(listId);
+  if (!list) return [];
+  const items = [];
+  list.querySelectorAll('.dyn-item').forEach(row => {
+    const sel = row.querySelector('select');
+    const inp = row.querySelector('input');
+    if (sel && inp && inp.value.trim()) {
+      items.push({ label: sel.value, url: inp.value.trim() });
+    }
+  });
+  return items;
+}
+
+function getDevLinks(listId) {
+  const list = document.getElementById(listId);
+  if (!list) return [];
+  const items = [];
+  list.querySelectorAll('.dyn-item').forEach(row => {
+    const sel = row.querySelector('select');
+    const inp = row.querySelector('input');
+    if (sel && inp && inp.value.trim()) {
+      items.push({ type: sel.value, url: inp.value.trim() });
+    }
+  });
+  return items;
+}
+
+function formatMirrors(mirrors) {
+  return mirrors.map(m => `[URL='${m.url}']${m.label.toUpperCase()}[/URL]`).join(' - ');
+}
+
+// ═══════════════════════════════════════════════════════
+// BBCode GENERATORS
+// ═══════════════════════════════════════════════════════
+function generateGame() {
+  const overview  = v('g-overview');
+  const ovSpoiler = document.getElementById('g-overview-spoiler').checked;
+
+  const updated   = v('g-updated');
+  const release   = v('g-release');
+  const origTitle = v('g-orig-title-val');
+  const aliases   = v('g-aliases-val');
+  const devName   = v('g-dev-name');
+  const devLinks  = getDevLinks('g-dev-links');
+  const publisher = v('g-publisher-val');
+  const censored  = v('g-censored');
+  const version   = v('g-version');
+  const osList    = checked('g-os');
+  const lang      = (langState['g-lang'] || []).join(', ') || 'English';
+  const vndb      = v('g-vndb-val');
+  const length    = v('g-length-val');
+  const prequel   = v('g-prequel-val');
+  const sequel    = v('g-sequel-val');
+  const store     = v('g-store-val');
+  const tags      = tagState['g-tags'] || [];
+  const install   = v('g-install');
+  const changelog = v('g-changelog');
+  const devnotes  = v('g-devnotes');
+
+  const dlWin     = getMirrors('g-dl-win');
+  const dlLinux   = getMirrors('g-dl-linux');
+  const dlMac     = getMirrors('g-dl-mac');
+  const dlOthers  = getMirrors('g-dl-others');
+  const dlPatches = getMirrors('g-dl-patches');
+  const dlExtras  = getMirrors('g-dl-extras');
+  const thanks    = v('g-thanks');
+
+  let o = '';
+
+  // Overview block
+  if (overview) {
+    o += '[CENTER][B]Overview:[/B]\n';
+    if (ovSpoiler) o += `[SPOILER]\n${overview}\n[/SPOILER]`;
+    else o += overview;
+    o += '[/CENTER]\n\n';
+  }
+
+  // Info fields
+  if (updated)   o += `[B]Thread Updated[/B]: ${updated}\n`;
+  if (release)   o += `[B]Release Date[/B]: ${release}\n`;
+  if (origTitle) o += `[B]Original Title[/B]: ${origTitle}\n`;
+  if (aliases)   o += `[B]Aliases[/B]: ${aliases}\n`;
+
+  // Developer
+  let devLine = devName || 'DEVELOPER';
+  if (devLinks.length) {
+    devLine += ' ' + devLinks.map(l => `[URL='${l.url}']${l.type}[/URL]`).join(' - ');
+  }
+  o += `[B]Developer[/B]: ${devLine}\n`;
+
+  if (publisher) o += `[B]Publisher[/B]: ${publisher}\n`;
+  if (censored)  o += `[B]Censored[/B]: ${censored}\n`;
+  if (version)   o += `[B]Version[/B]: ${version}\n`;
+  if (osList.length) o += `[B]OS[/B]: ${osList.join(', ')}\n`;
+  o += `[B]Language[/B]: ${lang}\n`;
+
+  if (vndb) {
+    // Detect if it's already a URL or just a code like v12345
+    if (vndb.startsWith('http')) o += `[B]VNDB[/B]: [URL='${vndb}']VNDB[/URL]\n`;
+    else o += `[B]VNDB[/B]: [URL='https://vndb.org/${vndb}']${vndb}[/URL]\n`;
+  }
+  if (length)  o += `[B]Length[/B]: ${length}\n`;
+  if (prequel) o += `[B]Prequel[/B]: ${prequel}\n`;
+  if (sequel)  o += `[B]Sequel[/B]: ${sequel}\n`;
+  const voices = (langState['g-voices'] || []).join(', ');
+  if (voices)  o += `[B]Voices[/B]: ${voices}\n`;
+  if (store)   o += `[B]Store[/B]: ${store}\n`;
+
+  // Genre
+  if (tags.length) {
+    o += `[B]Genre[/B]:\n[SPOILER]\n${tags.join(', ')}\n[/SPOILER]\n`;
+  }
+
+  o += '\n';
+
+  // Installation
+  if (install) {
+    o += `[B]Installation[/B]:\n[SPOILER]\n${install}\n[/SPOILER]\n\n`;
+  }
+
+  // Changelog
+  if (changelog) {
+    o += `[B]Changelog[/B]:\n[SPOILER]\n${changelog}\n[/SPOILER]\n\n`;
+  }
+
+  // Developer Notes
+  if (devnotes) {
+    o += `[B]Developer Notes[/B]:\n[SPOILER]\n${devnotes}\n[/SPOILER]\n\n`;
+  }
+
+  // Downloads
+  o += '[CENTER][B][SIZE=6]DOWNLOAD[/SIZE][/B]\n[SIZE=5]';
+
+  let dlLines = [];
+  if (dlWin.length)     dlLines.push(`[B]Win[/B]: ${formatMirrors(dlWin)}`);
+  if (dlLinux.length)   dlLines.push(`[B]Linux[/B]: ${formatMirrors(dlLinux)}`);
+  if (dlMac.length)     dlLines.push(`[B]Mac[/B]: ${formatMirrors(dlMac)}`);
+  if (dlOthers.length)  dlLines.push(`[B]Others[/B]: ${formatMirrors(dlOthers)}`);
+  if (dlPatches.length) dlLines.push(`[B]Patches[/B]: ${formatMirrors(dlPatches)}`);
+  if (dlExtras.length)  dlLines.push(`[B]Extras[/B]: ${formatMirrors(dlExtras)}`);
+
+  o += dlLines.join('\n');
+  o += '[/SIZE]\n';
+
+  if (thanks) o += `[SIZE=1]${thanks}[/SIZE]\n`;
+  o += '[/CENTER]';
+  return o;
+}
+
+function generateAnimation() {
+  const overview   = v('a-overview');
+  const updated    = v('a-updated');
+  const artist     = v('a-artist');
+  const links      = getDevLinks('a-links');
+  const censored   = v('a-censored');
+  const lang       = (langState['a-lang'] || []).join(', ') || 'English';
+  const res        = v('a-res');
+  const files      = v('a-files');
+  const length     = v('a-length');
+  const tags       = tagState['a-tags'] || [];
+  const install    = v('a-install');
+  const changelog  = v('a-changelog');
+  const collection = v('a-collection');
+  const mirrors    = getMirrors('a-dl');
+  const thanks     = v('a-thanks');
+
+  let o = '';
+
+  if (overview) { o += `[CENTER][B]Overview[/B]:\n${overview}[/CENTER]\n\n`; }
+
+  if (updated) o += `[B]Updated[/B]: ${updated}\n`;
+
+  let artistLine = artist || 'ARTIST';
+  if (links.length) artistLine += ' ' + links.map(l => `[URL='${l.url}']${l.type}[/URL]`).join(' - ');
+  o += `[B]Artist[/B]: ${artistLine}\n`;
+
+  o += `[B]Censorship[/B]: ${censored}\n`;
+  o += `[B]Language[/B]: ${lang}\n`;
+  if (res)   o += `[B]Resolution[/B]: ${res}\n`;
+  if (files) o += `[B]Files[/B]: ${files}\n`;
+  if (length) o += `[B]Length[/B]: ${length}\n`;
+
+  if (tags.length) o += `[B]Genre[/B]:\n[SPOILER]\n${tags.join(', ')}\n[/SPOILER]\n`;
+
+  o += '\n';
+
+  if (install) o += `[B]Installation[/B]:\n[SPOILER]\n${install}\n[/SPOILER]\n\n`;
+  if (changelog) o += `[B]Change-log[/B]:\n[SPOILER]\n${changelog}\n[/SPOILER]\n\n`;
+
+  o += '[CENTER]';
+  if (collection) {
+    o += `[SIZE=5][B]Collection List Download[/B]:[/SIZE]\n[SPOILER]\n${collection}\n[/SPOILER]\n\n`;
+  }
+  if (mirrors.length) o += `[SIZE=5][B]Download[/B]: ${formatMirrors(mirrors)}[/SIZE]\n`;
+  if (thanks) o += `[SIZE=1]${thanks}[/SIZE]\n`;
+  o += '[/CENTER]';
+  return o;
+}
+
+function generateComic() {
+  const overview   = v('c-overview');
+  const updated    = v('c-updated');
+  const artist     = v('c-artist');
+  const links      = getDevLinks('c-links');
+  const censored   = v('c-censored');
+  const lang       = (langState['c-lang'] || []).join(', ') || 'English';
+  const res        = v('c-res');
+  const pages      = v('c-pages');
+  const tags       = tagState['c-tags'] || [];
+  const install    = v('c-install');
+  const changelog  = v('c-changelog');
+  const collection = v('c-collection');
+  const mirrors    = getMirrors('c-dl');
+  const thanks     = v('c-thanks');
+
+  let o = '';
+
+  if (overview) { o += `[CENTER][B]Overview[/B]:\n${overview}[/CENTER]\n\n`; }
+
+  if (updated) o += `[B]Updated[/B]: ${updated}\n`;
+
+  let artistLine = artist || 'ARTIST';
+  if (links.length) artistLine += ' ' + links.map(l => `[URL='${l.url}']${l.type}[/URL]`).join(' - ');
+  o += `[B]Artist[/B]: ${artistLine}\n`;
+
+  o += `[B]Censorship[/B]: ${censored}\n`;
+  o += `[B]Language[/B]: ${lang}\n`;
+  if (res)   o += `[B]Resolution[/B]: ${res}\n`;
+  if (pages) o += `[B]Pages[/B]: ${pages}\n`;
+
+  if (tags.length) o += `[B]Genre[/B]:\n[SPOILER]\n${tags.join(', ')}\n[/SPOILER]\n`;
+
+  o += '\n';
+
+  if (install) o += `[B]Installation[/B]:\n[SPOILER]\n${install}\n[/SPOILER]\n\n`;
+  if (changelog) o += `[B]Change-log[/B]:\n[SPOILER]\n${changelog}\n[/SPOILER]\n\n`;
+
+  o += '[CENTER]';
+  if (collection) {
+    o += `[SIZE=5][B]Collection List Download[/B]:[/SIZE]\n[SPOILER]\n${collection}\n[/SPOILER]\n\n`;
+  }
+  if (mirrors.length) o += `[SIZE=5][B]Download[/B]: ${formatMirrors(mirrors)}[/SIZE]\n`;
+  if (thanks) o += `[SIZE=1]${thanks}[/SIZE]\n`;
+  o += '[/CENTER]';
+  return o;
+}
+
+// ═══════════════════════════════════════════════════════
+// ACTIONS
+// ═══════════════════════════════════════════════════════
+function generate() {
+  const activeTab = document.querySelector('.tab-btn.active')?.dataset.tab;
+  let result = '';
+  if (activeTab === 'game')      result = generateGame();
+  else if (activeTab === 'animation') result = generateAnimation();
+  else if (activeTab === 'comic')     result = generateComic();
+  document.getElementById('output').value = result;
+}
+
+function clearOutput() {
+  document.getElementById('output').value = '';
+}
+
+function clearAll() {
+  if (confirm('Reset everything to default? All entered data will be lost.')) {
+    location.reload();
+  }
+}
+
+function copyOutput() {
+  const out = document.getElementById('output');
+  if (!out.value) return;
+  navigator.clipboard.writeText(out.value).then(() => {
+    const btn = document.getElementById('copyBtn');
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.classList.remove('btn-ghost');
+    btn.classList.add('btn-success');
+    setTimeout(() => {
+      btn.textContent = orig;
+      btn.classList.remove('btn-success');
+      btn.classList.add('btn-ghost');
+    }, 2000);
+  });
+}
+</script>
+</body>
+</html>
