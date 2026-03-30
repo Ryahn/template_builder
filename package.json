@@ -1,6 +1,6 @@
 {
   "name": "f95-bbcode-generator",
-  "version": "1.1.0",
+  "version": "1.1.2",
   "description": "F95Zone BBCode template generator (desktop)",
   "main": "src/main/main.js",
   "scripts": {
@@ -14,7 +14,9 @@
     "appId": "com.f95zone.bbcode-generator",
     "productName": "F95 BBCode Generator",
     "publish": null,
-    "directories": { "output": "dist" },
+    "directories": {
+      "output": "dist"
+    },
     "files": [
       "src/**/*",
       "package.json"
@@ -26,15 +28,21 @@
       "**/node_modules/compress-commons/**"
     ],
     "win": {
-      "target": ["portable"],
+      "target": [
+        "portable"
+      ],
       "artifactName": "f95-bbcode-${version}-win-portable.${ext}"
     },
     "mac": {
-      "target": ["zip"],
+      "target": [
+        "zip"
+      ],
       "artifactName": "f95-bbcode-${version}-mac.${ext}"
     },
     "linux": {
-      "target": ["AppImage"],
+      "target": [
+        "AppImage"
+      ],
       "artifactName": "f95-bbcode-${version}-linux.${ext}"
     }
   },
