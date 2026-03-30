@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>F95Zone BBCode Generator v1.1.0</title>
+  <title>F95Zone BBCode Generator v1.1.3</title>
   <link rel="stylesheet" href="@fonts/fonts.css">
   <style>
     :root {
@@ -356,7 +356,7 @@
   <!-- HEADER -->
   <header class="app-header">
     <span class="logo">F95<em>Zone</em> BBCode</span>
-    <span class="header-badge" id="app-version-badge">Template Generator v1.1.0</span>
+    <span class="header-badge" id="app-version-badge">Template Generator v1.1.3</span>
     <div class="header-actions">
       <button type="button" class="btn-header" id="openHelpBtn">Help</button>
       <button type="button" class="btn-header" id="openSettingsBtn">Settings</button>
@@ -1992,10 +1992,15 @@ function clearOutput() {
 }
 
 function clearAll() {
-  if (confirm('Reset everything to default? All entered data will be lost.')) {
-    try { localStorage.removeItem(STATE_KEY); } catch (e) {}
-    location.reload();
-  }
+  if (!confirm('Reset everything to default? All entered data will be lost.')) return;
+  try {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    window.removeEventListener('beforeunload', saveFormState);
+    window.removeEventListener('pagehide', saveFormState);
+    localStorage.removeItem(STATE_KEY);
+  } catch (e) {}
+  location.reload();
 }
 
 function copyOutput() {
