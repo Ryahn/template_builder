@@ -1,0 +1,117 @@
+name: Release portable builds
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+          - os: macos-latest
+            platform: mac
+          - os: ubuntu-latest
+            platform: linux
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Linux build dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libfuse2 zip
+
+      - name: Skip macOS code signing (unsigned portable)
+        if: matrix.platform == 'mac'
+        run: echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
+
+      - name: Sync package version with tag
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+
+      - run: npm ci
+
+      - name: Build (${{ matrix.platform }})
+        run: npm run build:${{ matrix.platform }}
+
+      - name: Package Windows portable zip
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          $ver = $env:GITHUB_REF_NAME.TrimStart('v')
+          $exe = Get-ChildItem -Path dist -Filter "*.exe" | Select-Object -First 1
+          if (-not $exe) { throw "No portable .exe found in dist/" }
+          $zip = Join-Path dist "windows-portable-$ver.zip"
+          if (Test-Path $zip) { Remove-Item $zip -Force }
+          Compress-Archive -LiteralPath $exe.FullName -DestinationPath $zip
+
+      - name: Package Mac portable zip
+        if: matrix.platform == 'mac'
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          ver="${GITHUB_REF_NAME#v}"
+          zips=(dist/f95-bbcode-*-mac.zip)
+          if [[ ${#zips[@]} -eq 0 ]]; then
+            echo "No mac .zip found in dist/" >&2
+            ls -la dist >&2 || true
+            exit 1
+          fi
+          mv "${zips[0]}" "dist/mac-portable-${ver}.zip"
+
+      - name: Package Linux portable zip
+        if: matrix.platform == 'linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          ver="${GITHUB_REF_NAME#v}"
+          images=(dist/f95-bbcode-*-linux.AppImage)
+          if [[ ${#images[@]} -eq 0 ]]; then
+            echo "No AppImage found in dist/" >&2
+            ls -la dist >&2 || true
+            exit 1
+          fi
+          img="${images[0]}"
+          (cd dist && zip -j "linux-portable-${ver}.zip" "$(basename "${img}")")
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: portable-${{ matrix.platform }}
+          path: dist/${{ matrix.platform }}-portable-*.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          pattern: portable-*
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: release-assets/*.zip
