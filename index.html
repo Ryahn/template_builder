@@ -1748,6 +1748,17 @@ function formatMirrors(mirrors) {
   return mirrors.map(m => `[URL='${m.url}']${m.label.toUpperCase()}[/URL]`).join(' - ');
 }
 
+function formatGameStoreBbcode(storeText, devLinks) {
+  if (!storeText) return '';
+  const steam = devLinks.find(l => l.type === 'Steam' && l.url.trim());
+  if (!steam) return `[B]Store[/B]: ${storeText}\n`;
+  const parts = storeText.split(',').map(s => s.trim()).filter(Boolean);
+  const line = parts
+    .map(part => (/^steam$/i.test(part) ? `[URL='${steam.url}']${part}[/URL]` : part))
+    .join(', ');
+  return `[B]Store[/B]: ${line}\n`;
+}
+
 // ═══════════════════════════════════════════════════════
 // BBCode GENERATORS
 // ═══════════════════════════════════════════════════════
@@ -1823,7 +1834,7 @@ function generateGame() {
   if (sequel)  o += `[B]Sequel[/B]: ${sequel}\n`;
   const voices = (langState['g-voices'] || []).join(', ');
   if (voices)  o += `[B]Voices[/B]: ${voices}\n`;
-  if (store)   o += `[B]Store[/B]: ${store}\n`;
+  if (store)   o += formatGameStoreBbcode(store, devLinks);
 
   // Genre
   if (tags.length) {

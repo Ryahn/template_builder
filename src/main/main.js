@@ -63,6 +63,10 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
+ipcMain.on('app:get-version-sync', (event) => {
+  event.returnValue = pkg.version;
+});
+
 ipcMain.handle('settings:get', () => ({
   apiBaseUrl: store.get('apiBaseUrl'),
   vndbToken: store.get('vndbToken')

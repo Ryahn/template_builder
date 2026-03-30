@@ -1,10 +1,9 @@
-const path = require('path');
 const { contextBridge, ipcRenderer } = require('electron');
 
-const pkg = require(path.join(__dirname, '..', '..', 'package.json'));
+const appVersion = ipcRenderer.sendSync('app:get-version-sync');
 
 contextBridge.exposeInMainWorld('f95api', {
-  appVersion: pkg.version,
+  appVersion: typeof appVersion === 'string' ? appVersion : '',
   settingsGet: () => ipcRenderer.invoke('settings:get'),
   settingsSet: (patch) => ipcRenderer.invoke('settings:set', patch),
   steamFetchAppDetails: (appId, forceRefresh) =>
