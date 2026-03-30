@@ -16,10 +16,13 @@ jobs:
         include:
           - os: windows-latest
             platform: windows
+            npm_script: win
           - os: macos-latest
             platform: mac
+            npm_script: mac
           - os: ubuntu-latest
             platform: linux
+            npm_script: linux
 
     runs-on: ${{ matrix.os }}
 
@@ -50,7 +53,7 @@ jobs:
       - run: npm ci
 
       - name: Build (${{ matrix.platform }})
-        run: npm run build:${{ matrix.platform }}
+        run: npm run build:${{ matrix.npm_script }}
 
       - name: Package Windows portable zip
         if: matrix.platform == 'windows'

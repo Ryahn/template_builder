@@ -13,6 +13,7 @@
   "build": {
     "appId": "com.f95zone.bbcode-generator",
     "productName": "F95 BBCode Generator",
+    "publish": null,
     "directories": { "output": "dist" },
     "files": [
       "src/**/*",
