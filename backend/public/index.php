@@ -4,9 +4,19 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/lib/Response.php';
 require_once dirname(__DIR__) . '/lib/VndbClient.php';
 
-header('Access-Control-Allow-Origin: *');
+$allowedOrigins = ['file://', 'http://localhost', 'https://template.zonies.xyz'];
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if ($origin !== '' && in_array(rtrim($origin, '/'), $allowedOrigins, true)) {
+    header('Access-Control-Allow-Origin: ' . $origin);
+    header('Vary: Origin');
+} else {
+    header('Access-Control-Allow-Origin: https://template.zonies.xyz');
+}
 header('Access-Control-Allow-Headers: Content-Type, X-Vndb-Token');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
+header('Cache-Control: no-store');
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 if ($method === 'OPTIONS') {
@@ -33,16 +43,9 @@ if ($method === 'POST' && $path === '/v1/vn/lookup') {
         json_err(400, 'Provide id or search');
     }
 
-    $vndbTok = '';
-    if (isset($in['vndb_token'])) {
-        $vndbTok = trim((string) $in['vndb_token']);
-    }
-    unset($in['vndb_token']);
+    $vndbTok = trim((string) ($_SERVER['HTTP_X_VNDB_TOKEN'] ?? ''));
     if ($vndbTok === '') {
-        $vndbTok = trim((string) ($_SERVER['HTTP_X_VNDB_TOKEN'] ?? ''));
-    }
-    if ($vndbTok === '') {
-        json_err(400, 'VNDB token required: include vndb_token in the JSON body or X-Vndb-Token header');
+        json_err(400, 'VNDB token required: send X-Vndb-Token header');
     }
 
     $client = new VndbClient($vndbTok);

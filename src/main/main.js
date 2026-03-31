@@ -167,14 +167,14 @@ ipcMain.handle('steam:downloadScreenshots', async (_e, opts = {}) => {
     fs.mkdirSync(alt, { recursive: true });
     await downloadScreenshotsToDir(shots, alt);
     shell.showItemInFolder(alt);
-    return { ok: true, path: alt, count: shots.length, asZip: false };
+    return { ok: true, path: path.basename(alt), count: shots.length, asZip: false };
   }
 
   if (!asZip) {
     fs.mkdirSync(targetDir, { recursive: true });
     await downloadScreenshotsToDir(shots, targetDir);
     shell.showItemInFolder(targetDir);
-    return { ok: true, path: targetDir, count: shots.length, asZip: false };
+    return { ok: true, path: path.basename(targetDir), count: shots.length, asZip: false };
   }
 
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'f95-steam-'));
@@ -189,25 +189,33 @@ ipcMain.handle('steam:downloadScreenshots', async (_e, opts = {}) => {
     }
     await zipDirectoryToFile(tmpRoot, zipPath);
     shell.showItemInFolder(zipPath);
-    return { ok: true, path: zipPath, count: shots.length, asZip: true };
+    return { ok: true, path: path.basename(zipPath), count: shots.length, asZip: true };
   } finally {
     fs.rmSync(tmpRoot, { recursive: true, force: true });
   }
 });
 
 async function downloadScreenshotsToDir(shots, dir) {
-  for (let i = 0; i < shots.length; i += 1) {
-    const shot = shots[i];
-    const url = shot.path_full || shot.path_thumbnail;
-    if (!url || typeof url !== 'string') continue;
-    const ext = extFromUrl(url);
-    const filename = `screenshot_${String(i + 1).padStart(2, '0')}${ext}`;
-    const dest = path.join(dir, filename);
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Download failed ${res.status}: ${filename}`);
-    const buf = Buffer.from(await res.arrayBuffer());
-    fs.writeFileSync(dest, buf);
+  const CONCURRENCY = 4;
+  const tasks = shots.map((shot, i) => ({ shot, i }));
+  let idx = 0;
+
+  async function worker() {
+    while (idx < tasks.length) {
+      const { shot, i } = tasks[idx++];
+      const url = shot.path_full || shot.path_thumbnail;
+      if (!url || typeof url !== 'string') continue;
+      const ext = extFromUrl(url);
+      const filename = `screenshot_${String(i + 1).padStart(2, '0')}${ext}`;
+      const dest = path.join(dir, filename);
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Download failed ${res.status}: ${filename}`);
+      const buf = Buffer.from(await res.arrayBuffer());
+      fs.writeFileSync(dest, buf);
+    }
   }
+
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, tasks.length) }, () => worker()));
 }
 
 ipcMain.handle('backend:fetch', async (_e, options) => {
@@ -218,18 +226,21 @@ ipcMain.handle('backend:fetch', async (_e, options) => {
   const apiPath = options.path.startsWith('/') ? options.path : `/${options.path}`;
   const url = `${base}${apiPath}`;
   let bodyObj = options.body;
+  const headers = {
+    Accept: 'application/json'
+  };
+  if (method !== 'GET' && method !== 'HEAD') {
+    headers['Content-Type'] = 'application/json';
+  }
   if (
     method === 'POST' &&
-    apiPath === '/v1/vn/lookup' &&
-    bodyObj &&
-    typeof bodyObj === 'object' &&
-    !Array.isArray(bodyObj)
+    apiPath === '/v1/vn/lookup'
   ) {
     const vt = String(store.get('vndbToken') || '').trim();
     if (!vt) {
       return { ok: false, error: 'VNDB API token not set. Add it under Settings (from vndb.org/u/tokens).' };
     }
-    bodyObj = { ...bodyObj, vndb_token: vt };
+    headers['X-Vndb-Token'] = vt;
   }
   const bodyStr =
     bodyObj === undefined || bodyObj === null
@@ -237,13 +248,6 @@ ipcMain.handle('backend:fetch', async (_e, options) => {
       : typeof bodyObj === 'string'
         ? bodyObj
         : JSON.stringify(bodyObj);
-
-  const headers = {
-    Accept: 'application/json'
-  };
-  if (method !== 'GET' && method !== 'HEAD') {
-    headers['Content-Type'] = 'application/json';
-  }
 
   let res;
   try {
@@ -271,5 +275,5 @@ ipcMain.handle('backend:fetch', async (_e, options) => {
 });
 
 ipcMain.handle('shell:openExternal', (_e, url) => {
-  if (url) shell.openExternal(url);
+  if (url && /^https?:\/\//i.test(url)) shell.openExternal(url);
 });

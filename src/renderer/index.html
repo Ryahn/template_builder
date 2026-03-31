@@ -1028,6 +1028,35 @@
 
 <script>
 // ═══════════════════════════════════════════════════════
+// SECURITY HELPERS
+// ═══════════════════════════════════════════════════════
+function escapeHtml(str) {
+  const d = document.createElement('span');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function setMsg(el, type, text) {
+  const span = document.createElement('span');
+  span.className = type === 'ok' ? 'msg-ok' : 'msg-error';
+  span.textContent = text;
+  el.textContent = '';
+  el.appendChild(span);
+}
+
+function buildTagChip(label, onRemove) {
+  const chip = document.createElement('span');
+  chip.className = 'tag-chip';
+  chip.appendChild(document.createTextNode(label));
+  const x = document.createElement('span');
+  x.className = 'tag-x';
+  x.textContent = '\u00d7';
+  x.addEventListener('click', onRemove);
+  chip.appendChild(x);
+  return chip;
+}
+
+// ═══════════════════════════════════════════════════════
 // DATA
 // ═══════════════════════════════════════════════════════
 const ALL_TAGS = [
@@ -1262,10 +1291,7 @@ function rerenderTagLangChips() {
     if (!wrap || !input) return;
     wrap.querySelectorAll('.tag-chip').forEach(c => c.remove());
     (tagState[k] || []).forEach(tag => {
-      const chip = document.createElement('span');
-      chip.className = 'tag-chip';
-      chip.innerHTML = tag + '<span class="tag-x" data-tag="' + tag + '">×</span>';
-      chip.querySelector('.tag-x').addEventListener('click', () => removeTag(k, tag));
+      const chip = buildTagChip(tag, () => removeTag(k, tag));
       wrap.insertBefore(chip, input);
     });
   });
@@ -1281,10 +1307,7 @@ function rerenderTagLangChips() {
     if (!wrap || !input) return;
     wrap.querySelectorAll('.tag-chip').forEach(c => c.remove());
     (langState[key] || []).forEach(lang => {
-      const chip = document.createElement('span');
-      chip.className = 'tag-chip';
-      chip.innerHTML = lang + '<span class="tag-x">×</span>';
-      chip.querySelector('.tag-x').addEventListener('click', () => {
+      const chip = buildTagChip(lang, () => {
         langState[key] = langState[key].filter(l => l !== lang);
         rerenderTagLangChips();
         scheduleSave();
@@ -1336,7 +1359,7 @@ function applyFormState(state) {
       const rows = state.dyn[id];
       const list = document.getElementById(id);
       if (!list) return;
-      list.innerHTML = '';
+      list.textContent = '';
       const isArtist = id === 'a-links' || id === 'c-links';
       const isDevLink = id === 'g-dev-links' || id === 'a-links' || id === 'c-links';
       (rows || []).forEach(() => {
@@ -1375,9 +1398,9 @@ function wireFormPersistence() {
 
 function stripHtml(html) {
   if (!html) return '';
-  const d = document.createElement('div');
-  d.innerHTML = html;
-  return d.textContent.replace(/\s+/g, ' ').trim();
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  return (doc.body.textContent || '').replace(/\s+/g, ' ').trim();
 }
 
 function parseSteamReleaseDate(dateStr) {
@@ -1477,7 +1500,7 @@ async function setupSettingsAndTools() {
         apiBaseUrl: document.getElementById('set-api-base').value,
         vndbToken: document.getElementById('set-vndb-token').value
       });
-      document.getElementById('settings-msg').innerHTML = '<span class="msg-ok">Saved.</span>';
+      setMsg(document.getElementById('settings-msg'), 'ok', 'Saved.');
       setTimeout(() => settingsModal.classList.remove('open'), 400);
     });
     openTools?.addEventListener('click', () => {
@@ -1493,9 +1516,9 @@ async function setupSettingsAndTools() {
       if (refreshBtn) { refreshBtn.dataset.pressed = '0'; refreshBtn.textContent = 'Force refresh'; }
       const sid = document.getElementById('tool-steam-id').value.trim();
       const r = await window.f95api.steamFetchAppDetails(sid, force);
-      if (!r.ok) { msg.innerHTML = '<span class="msg-error">' + (r.error || 'Failed') + '</span>'; return; }
+      if (!r.ok) { setMsg(msg, 'error', r.error || 'Failed'); return; }
       await fillGameTabFromSteamPayload(r.data);
-      msg.innerHTML = '<span class="msg-ok">Loaded from Steam' + (r.cached ? ' (cache)' : '') + '.</span>';
+      setMsg(msg, 'ok', 'Loaded from Steam' + (r.cached ? ' (cache)' : '') + '.');
       toolsModal.classList.remove('open');
     });
     document.getElementById('tool-steam-refresh')?.addEventListener('click', function() {
@@ -1506,7 +1529,7 @@ async function setupSettingsAndTools() {
       const msg = document.getElementById('tools-msg');
       msg.textContent = '';
       const sid = document.getElementById('tool-steam-id').value.trim();
-      if (!sid) { msg.innerHTML = '<span class="msg-error">Enter a Steam App ID.</span>'; return; }
+      if (!sid) { setMsg(msg, 'error', 'Enter a Steam App ID.'); return; }
       const asZip = !!document.getElementById('tool-steam-zip')?.checked;
       const pickFolder = !!document.getElementById('tool-steam-pick-dir')?.checked;
       const refreshBtn = document.getElementById('tool-steam-refresh');
@@ -1515,27 +1538,27 @@ async function setupSettingsAndTools() {
       try {
         const r = await window.f95api.steamDownloadScreenshots({ appId: sid, asZip, pickFolder, forceRefresh });
         if (!r.ok) {
-          msg.innerHTML = '<span class="msg-error">' + (r.error || 'Download failed') + '</span>';
+          setMsg(msg, 'error', r.error || 'Download failed');
           return;
         }
-        msg.innerHTML = '<span class="msg-ok">Saved ' + r.count + ' image(s): ' + (r.path || '') + '</span>';
+        setMsg(msg, 'ok', 'Saved ' + r.count + ' image(s): ' + (r.path || ''));
       } catch (e) {
-        msg.innerHTML = '<span class="msg-error">' + (e.message || String(e)) + '</span>';
+        setMsg(msg, 'error', e.message || String(e));
       }
     });
     document.getElementById('tool-vndb-fetch')?.addEventListener('click', async () => {
       const msg = document.getElementById('tools-msg');
       msg.textContent = '';
       const q = document.getElementById('tool-vndb-q').value.trim();
-      if (!q) { msg.innerHTML = '<span class="msg-error">Enter id or search.</span>'; return; }
+      if (!q) { setMsg(msg, 'error', 'Enter id or search.'); return; }
       const body = q.match(/^v\d+$/i) || q.match(/^\d+$/) ? { id: q.startsWith('v') ? q : 'v' + q } : { search: q };
       const res = await window.f95api.backendFetch({ method: 'POST', path: '/v1/vn/lookup', body });
       if (!res.ok) {
-        msg.innerHTML = '<span class="msg-error">' + (res.body?.error || res.body?.message || ('HTTP ' + res.status)) + '</span>';
+        setMsg(msg, 'error', res.body?.error || res.body?.message || ('HTTP ' + res.status));
         return;
       }
       const vn = res.body && res.body.vn;
-      if (!vn) { msg.innerHTML = '<span class="msg-error">No VN in response.</span>'; return; }
+      if (!vn) { setMsg(msg, 'error', 'No VN in response.'); return; }
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === 'game'));
       document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-game'));
       const vid = vn.id || '';
@@ -1583,7 +1606,7 @@ async function setupSettingsAndTools() {
         tagState['g-tags'] = filterToAllowedTags(raw);
         rerenderTagLangChips();
       }
-      msg.innerHTML = '<span class="msg-ok">VNDB data applied.</span>';
+      setMsg(msg, 'ok', 'VNDB data applied.');
       scheduleSave();
       toolsModal.classList.remove('open');
     });
@@ -1720,10 +1743,7 @@ function initLangPicker(stateKey, wrapId, inputId, dropId, defaultEnglish = true
   function renderLang() {
     wrap.querySelectorAll('.tag-chip').forEach(c => c.remove());
     langState[stateKey].forEach(lang => {
-      const chip = document.createElement('span');
-      chip.className = 'tag-chip';
-      chip.innerHTML = lang + '<span class="tag-x">×</span>';
-      chip.querySelector('.tag-x').addEventListener('click', () => {
+      const chip = buildTagChip(lang, () => {
         langState[stateKey] = langState[stateKey].filter(l => l !== lang);
         renderLang();
         scheduleSave();
@@ -1737,7 +1757,7 @@ function initLangPicker(stateKey, wrapId, inputId, dropId, defaultEnglish = true
     const results = LANGUAGES.filter(l =>
       (q ? l.toLowerCase().includes(q) : true) && !langState[stateKey].includes(l)
     );
-    drop.innerHTML = '';
+    drop.textContent = '';
     hiIdx = -1;
     if (!results.length) { drop.classList.remove('open'); return; }
     results.forEach(l => {
@@ -1793,13 +1813,9 @@ function initTagInput(stateKey, wrapId, inputId, dropId) {
   let hiIdx   = -1;
 
   function render() {
-    // Remove existing chips
     wrap.querySelectorAll('.tag-chip').forEach(c => c.remove());
     tagState[stateKey].forEach(tag => {
-      const chip = document.createElement('span');
-      chip.className = 'tag-chip';
-      chip.innerHTML = tag + '<span class="tag-x" data-tag="' + tag + '">×</span>';
-      chip.querySelector('.tag-x').addEventListener('click', () => removeTag(stateKey, tag, stateKey, wrapId, inputId, dropId));
+      const chip = buildTagChip(tag, () => removeTag(stateKey, tag, stateKey, wrapId, inputId, dropId));
       wrap.insertBefore(chip, input);
     });
   }
@@ -1809,7 +1825,7 @@ function initTagInput(stateKey, wrapId, inputId, dropId) {
     const results = ALL_TAGS.filter(t =>
       t.toLowerCase().includes(q) && !tagState[stateKey].includes(t)
     ).slice(0, 30);
-    drop.innerHTML = '';
+    drop.textContent = '';
     hiIdx = -1;
     if (!results.length || !q) { drop.classList.remove('open'); return; }
     results.forEach((t, i) => {
@@ -1862,10 +1878,7 @@ function removeTag(stateKey, tag) {
   wrap.querySelectorAll('.tag-chip').forEach(c => c.remove());
   const input = document.getElementById(inputIds[stateKey]);
   tagState[stateKey].forEach(t => {
-    const chip = document.createElement('span');
-    chip.className = 'tag-chip';
-    chip.innerHTML = t + '<span class="tag-x" data-tag="' + t + '">×</span>';
-    chip.querySelector('.tag-x').addEventListener('click', () => removeTag(stateKey, t));
+    const chip = buildTagChip(t, () => removeTag(stateKey, t));
     wrap.insertBefore(chip, input);
   });
 }
@@ -1879,41 +1892,40 @@ function removeDynRow(btn) {
   scheduleSave();
 }
 
+function buildDynRow(types) {
+  const item = document.createElement('div');
+  item.className = 'dyn-item';
+  const sel = document.createElement('select');
+  types.forEach(t => { const o = document.createElement('option'); o.textContent = t; sel.appendChild(o); });
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  inp.placeholder = 'https://\u2026';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'icon-btn';
+  btn.title = 'Remove';
+  btn.textContent = '\u00d7';
+  btn.addEventListener('click', () => removeDynRow(btn));
+  item.appendChild(sel);
+  item.appendChild(inp);
+  item.appendChild(btn);
+  inp.addEventListener('input', scheduleSave);
+  inp.addEventListener('change', scheduleSave);
+  sel.addEventListener('change', scheduleSave);
+  return item;
+}
+
 function addDevLink(listId, isArtist = false) {
   const list = document.getElementById(listId);
   if (!list) return;
   const types = isArtist ? ARTIST_LINK_TYPES : DEV_LINK_TYPES;
-  const item = document.createElement('div');
-  item.className = 'dyn-item';
-  item.innerHTML = `
-    <select>${types.map(t=>`<option>${t}</option>`).join('')}</select>
-    <input type="text" placeholder="https://…">
-    <button type="button" class="icon-btn" onclick="removeDynRow(this)" title="Remove">×</button>
-  `;
-  list.appendChild(item);
-  const inp = item.querySelector('input');
-  const sel = item.querySelector('select');
-  inp.addEventListener('input', scheduleSave);
-  inp.addEventListener('change', scheduleSave);
-  sel.addEventListener('change', scheduleSave);
+  list.appendChild(buildDynRow(types));
 }
 
 function addMirror(listId) {
   const list = document.getElementById(listId);
   if (!list) return;
-  const item = document.createElement('div');
-  item.className = 'dyn-item';
-  item.innerHTML = `
-    <select>${MIRROR_TYPES.map(t=>`<option>${t}</option>`).join('')}</select>
-    <input type="text" placeholder="https://…">
-    <button type="button" class="icon-btn" onclick="removeDynRow(this)" title="Remove">×</button>
-  `;
-  list.appendChild(item);
-  const inp = item.querySelector('input');
-  const sel = item.querySelector('select');
-  inp.addEventListener('input', scheduleSave);
-  inp.addEventListener('change', scheduleSave);
-  sel.addEventListener('change', scheduleSave);
+  list.appendChild(buildDynRow(MIRROR_TYPES));
 }
 
 // ═══════════════════════════════════════════════════════

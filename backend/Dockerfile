@@ -14,9 +14,13 @@ RUN printf '%s\n' \
   '<VirtualHost *:80>' \
   '  DocumentRoot /var/www/html/public' \
   '  <Directory /var/www/html/public>' \
-  '    AllowOverride All' \
+  '    AllowOverride None' \
+  '    Options -Indexes' \
   '    Require all granted' \
   '    FallbackResource /index.php' \
+  '  </Directory>' \
+  '  <Directory /var/www/html/lib>' \
+  '    Require all denied' \
   '  </Directory>' \
   '</VirtualHost>' \
   > /etc/apache2/sites-available/000-default.conf
