@@ -4,19 +4,9 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/lib/Response.php';
 require_once dirname(__DIR__) . '/lib/VndbClient.php';
 
-$allowedOrigins = ['file://', 'http://localhost', 'https://template.zonies.xyz'];
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-if ($origin !== '' && in_array(rtrim($origin, '/'), $allowedOrigins, true)) {
-    header('Access-Control-Allow-Origin: ' . $origin);
-    header('Vary: Origin');
-} else {
-    header('Access-Control-Allow-Origin: https://template.zonies.xyz');
-}
+header('Access-Control-Allow-Origin: https://template.zonies.xyz');
 header('Access-Control-Allow-Headers: Content-Type, X-Vndb-Token');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-header('X-Content-Type-Options: nosniff');
-header('X-Frame-Options: DENY');
-header('Cache-Control: no-store');
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 if ($method === 'OPTIONS') {

@@ -167,14 +167,14 @@ ipcMain.handle('steam:downloadScreenshots', async (_e, opts = {}) => {
     fs.mkdirSync(alt, { recursive: true });
     await downloadScreenshotsToDir(shots, alt);
     shell.showItemInFolder(alt);
-    return { ok: true, path: path.basename(alt), count: shots.length, asZip: false };
+    return { ok: true, path: alt, count: shots.length, asZip: false };
   }
 
   if (!asZip) {
     fs.mkdirSync(targetDir, { recursive: true });
     await downloadScreenshotsToDir(shots, targetDir);
     shell.showItemInFolder(targetDir);
-    return { ok: true, path: path.basename(targetDir), count: shots.length, asZip: false };
+    return { ok: true, path: targetDir, count: shots.length, asZip: false };
   }
 
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'f95-steam-'));
@@ -189,7 +189,7 @@ ipcMain.handle('steam:downloadScreenshots', async (_e, opts = {}) => {
     }
     await zipDirectoryToFile(tmpRoot, zipPath);
     shell.showItemInFolder(zipPath);
-    return { ok: true, path: path.basename(zipPath), count: shots.length, asZip: true };
+    return { ok: true, path: zipPath, count: shots.length, asZip: true };
   } finally {
     fs.rmSync(tmpRoot, { recursive: true, force: true });
   }
@@ -275,5 +275,5 @@ ipcMain.handle('backend:fetch', async (_e, options) => {
 });
 
 ipcMain.handle('shell:openExternal', (_e, url) => {
-  if (url && /^https?:\/\//i.test(url)) shell.openExternal(url);
+  if (url && /^(https?:\/\/|mailto:|steam:)/i.test(url)) shell.openExternal(url);
 });

@@ -14,7 +14,7 @@ RUN printf '%s\n' \
   '<VirtualHost *:80>' \
   '  DocumentRoot /var/www/html/public' \
   '  <Directory /var/www/html/public>' \
-  '    AllowOverride None' \
+  '    AllowOverride All' \
   '    Options -Indexes' \
   '    Require all granted' \
   '    FallbackResource /index.php' \
