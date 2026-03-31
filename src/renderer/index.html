@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>F95Zone BBCode Generator v1.1.3</title>
+  <title>F95Zone BBCode Generator v1.1.4</title>
   <link rel="stylesheet" href="@fonts/fonts.css">
   <style>
     :root {
@@ -274,6 +274,34 @@
     .btn-warn { background: transparent; border-color: var(--amber); color: var(--amber); }
     .btn-warn:hover { background: var(--amber-dim); }
 
+    .output-quick {
+      flex-shrink: 0; max-height: 36vh; overflow-y: auto;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+      padding: 10px 14px 12px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .output-snippet-head {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 8px; margin-bottom: 4px;
+    }
+    .output-snippet-label {
+      font-family: var(--font-ui); font-size: 10px; font-weight: 600;
+      letter-spacing: .08em; text-transform: uppercase; color: var(--text-faint);
+    }
+    .output-snippet-area {
+      width: 100%; background: var(--input-bg); border: 1px solid var(--border);
+      border-radius: 4px; color: var(--text); font-family: var(--font-mono);
+      font-size: 11.5px; line-height: 1.5; padding: 8px 10px; resize: vertical;
+      min-height: 40px; outline: none;
+    }
+    .output-snippet-area:focus {
+      border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim);
+    }
+    .btn-tiny {
+      font-size: 10px; padding: 4px 10px; letter-spacing: .06em;
+    }
+
     .output-area {
       flex: 1; width: 100%; background: var(--input-bg);
       color: #8fb4d0; font-family: var(--font-mono); font-size: 11.5px;
@@ -356,7 +384,7 @@
   <!-- HEADER -->
   <header class="app-header">
     <span class="logo">F95<em>Zone</em> BBCode</span>
-    <span class="header-badge" id="app-version-badge">Template Generator v1.1.3</span>
+    <span class="header-badge" id="app-version-badge">Template Generator v1.1.4</span>
     <div class="header-actions">
       <button type="button" class="btn-header" id="openHelpBtn">Help</button>
       <button type="button" class="btn-header" id="openSettingsBtn">Settings</button>
@@ -414,6 +442,13 @@
               <button class="opt-chip" data-opt="g-sequel">Sequel</button>
               <button class="opt-chip" data-opt="g-voices">Voices</button>
               <button class="opt-chip" data-opt="g-store">Store</button>
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <div class="label">Thread title (subject)</div>
+                <input type="text" id="g-thread-title" placeholder="English listing title — e.g. filled by VNDB import" autocomplete="off">
+              </div>
             </div>
 
             <div class="row">
@@ -840,10 +875,26 @@
       <div class="output-bar">
         <div class="output-label"><span class="pulse"></span>BBCode Output</div>
         <div class="bar-actions">
-          <button class="btn btn-warn" onclick="clearAll()">Clear All</button>
-          <button class="btn btn-ghost" id="clearBtn" onclick="clearOutput()">Clear</button>
-          <button class="btn btn-ghost" id="copyBtn" onclick="copyOutput()">Copy</button>
-          <button class="btn btn-primary" onclick="generate()">Generate</button>
+          <button type="button" class="btn btn-warn" onclick="clearAll()">Clear All</button>
+          <button type="button" class="btn btn-ghost" id="clearBtn" onclick="clearOutput()">Clear</button>
+          <button type="button" class="btn btn-ghost" id="copyBtn" onclick="copyOutput()">Copy</button>
+          <button type="button" class="btn btn-primary" onclick="generate()">Generate</button>
+        </div>
+      </div>
+      <div class="output-quick">
+        <div>
+          <div class="output-snippet-head">
+            <span class="output-snippet-label">Title (thread subject)</span>
+            <button type="button" class="btn btn-ghost btn-tiny" id="copyTitleBtn" onclick="copyTitleOutput()">Copy</button>
+          </div>
+          <textarea class="output-snippet-area" id="output-title" readonly rows="2" placeholder="Plain title line — filled when you generate the Game tab"></textarea>
+        </div>
+        <div>
+          <div class="output-snippet-head">
+            <span class="output-snippet-label">Genre tags</span>
+            <button type="button" class="btn btn-ghost btn-tiny" id="copyGenreBtn" onclick="copyGenreOutput()">Copy</button>
+          </div>
+          <textarea class="output-snippet-area" id="output-genre" readonly rows="3" placeholder="Comma-separated F95 tags — filled when you generate the Game tab"></textarea>
         </div>
       </div>
       <textarea class="output-area" id="output" readonly placeholder="Fill in the form and click Generate…"></textarea>
@@ -1006,7 +1057,143 @@ const ALL_TAGS = [
   'Insect','Parasite','Superpowers'
 ];
 
-const LANGUAGES = ['English','Japanese','Spanish','German','Italian','Portuguese','Russian'];
+const ALLOWED_TAG_BY_LOWER = new Map(ALL_TAGS.map(t => [t.toLowerCase(), t]));
+
+/** VNDB tag names (lowercase) -> canonical F95 tag from ALL_TAGS */
+const VNDB_TAG_ALIASES = {
+  'science fiction': 'Sci-fi',
+  'hard science fiction': 'Sci-fi',
+  'science fiction adventure': 'Sci-fi',
+  'comedy': 'Humor',
+  'graphic violence': 'Graphic Violence',
+  'bloody scenes': 'Graphic Violence',
+  'gore': 'Graphic Violence',
+  'school life': 'School Setting',
+  'school': 'School Setting',
+  'high school': 'School Setting',
+  'rpg': 'Rpg',
+  'role playing game': 'Rpg',
+  'turn-based rpg': 'Rpg',
+  'yaoi': 'Gay',
+  'yuri': 'Lesbian',
+  'girls love': 'Lesbian',
+  'boys love': 'Gay',
+  'diegetically voiced protagonist': 'Voiced',
+  'few choices': 'Kinetic Novel',
+  'kinetic novel': 'Kinetic Novel',
+  'male protagonist': 'Male Protagonist',
+  'female protagonist': 'Female Protagonist',
+  'no sexual content': 'No Sexual Content',
+  'no pornographic content': 'No Sexual Content',
+  'shota on shota': 'Shota',
+  'lolicon': 'Loli'
+};
+
+function canonicalF95Tag(name) {
+  const raw = String(name || '').trim();
+  if (!raw) return null;
+  const direct = ALLOWED_TAG_BY_LOWER.get(raw.toLowerCase());
+  if (direct) return direct;
+  const alias = VNDB_TAG_ALIASES[raw.toLowerCase()];
+  if (alias) {
+    const canon = ALLOWED_TAG_BY_LOWER.get(alias.toLowerCase());
+    return canon || null;
+  }
+  return null;
+}
+
+/** Keep only F95-allowed tags; preserves first-seen order. */
+function filterToAllowedTags(names) {
+  const out = [];
+  const seen = new Set();
+  for (const n of names) {
+    const c = canonicalF95Tag(typeof n === 'string' ? n : (n && (n.name || n.id)) || '');
+    if (c && !seen.has(c)) {
+      seen.add(c);
+      out.push(c);
+    }
+  }
+  return out;
+}
+
+function composeF95ThreadTitle(title, version, devName) {
+  const t = (title || '').trim();
+  const ver = (version || '').trim();
+  const d = (devName || '').trim();
+  if (!t && !ver && !d) return '';
+  let line = t;
+  if (ver) line += (line ? ' ' : '') + '[' + ver + ']';
+  if (d) line += (line ? ' ' : '') + '[' + d + ']';
+  return line;
+}
+
+/** VNDB / ISO-style codes (lowercase keys) → F95-style language labels */
+const LANG_CODE_TO_DISPLAY = {
+  en: 'English', ja: 'Japanese', de: 'German', fr: 'French', es: 'Spanish', it: 'Italian',
+  pt: 'Portuguese', ru: 'Russian', ko: 'Korean', zh: 'Chinese', pl: 'Polish', cs: 'Czech',
+  hu: 'Hungarian', tr: 'Turkish', vi: 'Vietnamese', nl: 'Dutch', sv: 'Swedish', da: 'Danish',
+  no: 'Norwegian', fi: 'Finnish', el: 'Greek', he: 'Hebrew', ar: 'Arabic', hi: 'Hindi',
+  th: 'Thai', id: 'Indonesian', uk: 'Ukrainian', ro: 'Romanian', bg: 'Bulgarian', hr: 'Croatian',
+  sk: 'Slovak', ms: 'Malay', tl: 'Filipino', fil: 'Filipino', fa: 'Persian', et: 'Estonian',
+  lv: 'Latvian', lt: 'Lithuanian', is: 'Icelandic', ga: 'Irish', mt: 'Maltese', ca: 'Catalan',
+  eu: 'Basque', gl: 'Galician', sw: 'Swahili', bn: 'Bengali', ta: 'Tamil', te: 'Telugu',
+  'pt-br': 'Portuguese (Brazil)', 'pt-pt': 'Portuguese (Portugal)',
+  'zh-hans': 'Chinese (Simplified)', 'zh-hant': 'Chinese (Traditional)', 'zh-cn': 'Chinese (Simplified)',
+  'zh-tw': 'Chinese (Traditional)', 'zh-sg': 'Chinese (Simplified)', 'zh-hk': 'Chinese (Traditional)',
+  'en-us': 'English', 'en-gb': 'English', 'es-es': 'Spanish', 'es-419': 'Spanish',
+  'nb': 'Norwegian', 'nn': 'Norwegian'
+};
+
+const LANGUAGES_BASE = ['English','Japanese','Spanish','German','Italian','Portuguese','Russian','French','Korean',
+  'Polish','Czech','Hungarian','Turkish','Vietnamese','Chinese (Simplified)','Chinese (Traditional)',
+  'Portuguese (Brazil)','Dutch','Thai','Indonesian','Arabic','Ukrainian','Romanian','Swedish','Norwegian',
+  'Danish','Finnish','Hebrew','Greek','Hindi','Filipino'];
+const LANGUAGES = [...new Set([...LANGUAGES_BASE, ...Object.values(LANG_CODE_TO_DISPLAY)])].sort((a, b) =>
+  a.localeCompare(b, undefined, { sensitivity: 'base' }));
+
+const KNOWN_LANG_DISPLAY_LOOKUP = (() => {
+  const m = new Map();
+  for (const name of LANGUAGES) m.set(name.toLowerCase().replace(/_/g, '-'), name);
+  return m;
+})();
+
+function langTokenToDisplay(token) {
+  const raw = String(token || '').trim();
+  if (!raw) return '';
+  const norm = raw.toLowerCase().replace(/_/g, '-');
+  const directName = KNOWN_LANG_DISPLAY_LOOKUP.get(norm);
+  if (directName) return directName;
+  if (LANG_CODE_TO_DISPLAY[norm]) return LANG_CODE_TO_DISPLAY[norm];
+  const primary = norm.split('-')[0];
+  if (LANG_CODE_TO_DISPLAY[primary]) return LANG_CODE_TO_DISPLAY[primary];
+  if (/^[a-z]{2,3}(-[a-z0-9]{2,8})*$/i.test(raw)) {
+    return raw.length <= 3 ? raw.toUpperCase() : raw.split('-').map(p =>
+      p.length <= 3 ? p.toUpperCase() : p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()
+    ).join('-');
+  }
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
+function normalizeLangArray(arr) {
+  if (!arr || !arr.length) return [];
+  const seen = new Set();
+  const out = [];
+  for (const item of arr) {
+    const d = langTokenToDisplay(item);
+    if (!d) continue;
+    const key = d.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(d);
+  }
+  return out;
+}
+
+function langListToDisplayCsv(arr) {
+  const list = normalizeLangArray(arr);
+  if (!list.length) return '';
+  return [...list].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })).join(', ');
+}
 
 const DEV_LINK_TYPES  = ['Patreon','Website','Itch.io','Steam','DLsite','Ci-en','Discord',
                           'Twitter/X','BuyMeACoffee','Subscribestar','Gumroad','Pixiv','Other'];
@@ -1038,6 +1225,7 @@ function collectFormState() {
   const inputs = {};
   document.querySelectorAll('input[id], textarea[id], select[id]').forEach(el => {
     if (el.closest('.modal')) return;
+    if (el.id === 'output' || el.id === 'output-title' || el.id === 'output-genre') return;
     if (el.type === 'checkbox') inputs[el.id] = el.checked;
     else inputs[el.id] = el.value;
   });
@@ -1136,7 +1324,13 @@ function applyFormState(state) {
     });
   }
   if (state.tagState) Object.assign(tagState, JSON.parse(JSON.stringify(state.tagState)));
-  if (state.langState) Object.assign(langState, JSON.parse(JSON.stringify(state.langState)));
+  if (state.langState) {
+    const langs = JSON.parse(JSON.stringify(state.langState));
+    Object.keys(langs).forEach(k => {
+      if (Array.isArray(langs[k])) langs[k] = normalizeLangArray(langs[k]);
+    });
+    Object.assign(langState, langs);
+  }
   if (state.dyn) {
     DYN_IDS.forEach(id => {
       const rows = state.dyn[id];
@@ -1164,11 +1358,16 @@ function applyFormState(state) {
   }
 }
 
+function closeAllTagDrops() {
+  document.querySelectorAll('.tag-drop.open').forEach(d => d.classList.remove('open'));
+}
+
 function wireFormPersistence() {
   const panel = document.getElementById('form-panel');
   if (panel) {
     panel.addEventListener('input', scheduleSave, true);
     panel.addEventListener('change', scheduleSave, true);
+    panel.addEventListener('scroll', closeAllTagDrops, { passive: true });
   }
   window.addEventListener('beforeunload', saveFormState);
   window.addEventListener('pagehide', saveFormState);
@@ -1253,8 +1452,7 @@ async function fillGameTabFromSteamPayload(payload) {
   }
   if (d.genres && d.genres.length) {
     const names = d.genres.map(g => g.description).filter(Boolean);
-    const matched = names.filter(n => ALL_TAGS.includes(n));
-    tagState['g-tags'] = matched.length ? matched : names.slice(0, 15);
+    tagState['g-tags'] = filterToAllowedTags(names);
     rerenderTagLangChips();
   }
   scheduleSave();
@@ -1343,6 +1541,8 @@ async function setupSettingsAndTools() {
       const vid = vn.id || '';
       const vndbIn = document.getElementById('g-vndb-val');
       if (vndbIn) vndbIn.value = vid || vndbIn.value;
+      const threadTitleIn = document.getElementById('g-thread-title');
+      if (threadTitleIn && vn.title) threadTitleIn.value = String(vn.title);
       const orig = document.getElementById('g-orig-title-val');
       const aliases = document.getElementById('g-aliases-val');
       if (orig && vn.alttitle) {
@@ -1375,11 +1575,12 @@ async function setupSettingsAndTools() {
         devInput.value = vn.developers.map(d => d.name || d).join(', ');
       }
       if (vn.languages && vn.languages.length) {
-        langState['g-lang'] = vn.languages.slice();
+        langState['g-lang'] = normalizeLangArray(vn.languages);
         rerenderTagLangChips();
       }
       if (vn.tags && vn.tags.length) {
-        tagState['g-tags'] = vn.tags.map(t => typeof t === 'string' ? t : (t.name || t.id || '')).filter(Boolean);
+        const raw = vn.tags.map(t => typeof t === 'string' ? t : (t.name || t.id || '')).filter(Boolean);
+        tagState['g-tags'] = filterToAllowedTags(raw);
         rerenderTagLangChips();
       }
       msg.innerHTML = '<span class="msg-ok">VNDB data applied.</span>';
@@ -1455,7 +1656,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const hasSaved = saved && saved.version === 2;
   if (hasSaved) {
     if (saved.tagState) Object.assign(tagState, saved.tagState);
-    if (saved.langState) Object.assign(langState, saved.langState);
+    if (saved.langState) {
+      const langs = JSON.parse(JSON.stringify(saved.langState));
+      Object.keys(langs).forEach(k => {
+        if (Array.isArray(langs[k])) langs[k] = normalizeLangArray(langs[k]);
+      });
+      Object.assign(langState, langs);
+    }
   }
 
   initTagInput('g-tags', 'g-tags-wrap', 'g-tags-input', 'g-tags-drop');
@@ -1487,6 +1694,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   wireFormPersistence();
+  document.addEventListener('mousedown', (e) => {
+    const t = e.target;
+    if (!(t instanceof Element)) return;
+    if (!t.closest('.tag-wrap')) closeAllTagDrops();
+  }, true);
   setupHelpModal();
   setupSettingsAndTools();
 });
@@ -1768,6 +1980,7 @@ function generateGame() {
 
   const updated   = v('g-updated');
   const release   = v('g-release');
+  const threadTitle = v('g-thread-title');
   const origTitle = v('g-orig-title-val');
   const aliases   = v('g-aliases-val');
   const devName   = v('g-dev-name');
@@ -1776,7 +1989,7 @@ function generateGame() {
   const censored  = v('g-censored');
   const version   = v('g-version');
   const osList    = checked('g-os');
-  const lang      = (langState['g-lang'] || []).join(', ') || 'English';
+  const lang      = langListToDisplayCsv(langState['g-lang'] || []) || 'English';
   const vndb      = v('g-vndb-val');
   const length    = v('g-length-val');
   const prequel   = v('g-prequel-val');
@@ -1794,6 +2007,9 @@ function generateGame() {
   const dlPatches = getMirrors('g-dl-patches');
   const dlExtras  = getMirrors('g-dl-extras');
   const thanks    = v('g-thanks');
+
+  const titleLine = composeF95ThreadTitle(threadTitle, version, devName);
+  const genreCsv  = tags.length ? tags.join(', ') : '';
 
   let o = '';
 
@@ -1832,13 +2048,12 @@ function generateGame() {
   if (length)  o += `[B]Length[/B]: ${length}\n`;
   if (prequel) o += `[B]Prequel[/B]: ${prequel}\n`;
   if (sequel)  o += `[B]Sequel[/B]: ${sequel}\n`;
-  const voices = (langState['g-voices'] || []).join(', ');
+  const voices = langListToDisplayCsv(langState['g-voices'] || []);
   if (voices)  o += `[B]Voices[/B]: ${voices}\n`;
   if (store)   o += formatGameStoreBbcode(store, devLinks);
 
-  // Genre
   if (tags.length) {
-    o += `[B]Genre[/B]:\n[SPOILER]\n${tags.join(', ')}\n[/SPOILER]\n`;
+    o += `[B]Genre[/B]:\n[SPOILER]\n${genreCsv}\n[/SPOILER]\n`;
   }
 
   o += '\n';
@@ -1874,7 +2089,7 @@ function generateGame() {
 
   if (thanks) o += `[SIZE=1]${thanks}[/SIZE]\n`;
   o += '[/CENTER]';
-  return o;
+  return { text: o, titleLine, genreCsv };
 }
 
 function generateAnimation() {
@@ -1883,7 +2098,7 @@ function generateAnimation() {
   const artist     = v('a-artist');
   const links      = getDevLinks('a-links');
   const censored   = v('a-censored');
-  const lang       = (langState['a-lang'] || []).join(', ') || 'English';
+  const lang       = langListToDisplayCsv(langState['a-lang'] || []) || 'English';
   const res        = v('a-res');
   const files      = v('a-files');
   const length     = v('a-length');
@@ -1933,7 +2148,7 @@ function generateComic() {
   const artist     = v('c-artist');
   const links      = getDevLinks('c-links');
   const censored   = v('c-censored');
-  const lang       = (langState['c-lang'] || []).join(', ') || 'English';
+  const lang       = langListToDisplayCsv(langState['c-lang'] || []) || 'English';
   const res        = v('c-res');
   const pages      = v('c-pages');
   const tags       = tagState['c-tags'] || [];
@@ -1980,15 +2195,30 @@ function generateComic() {
 // ═══════════════════════════════════════════════════════
 function generate() {
   const activeTab = document.querySelector('.tab-btn.active')?.dataset.tab;
+  const out = document.getElementById('output');
+  const titleBox = document.getElementById('output-title');
+  const genreBox = document.getElementById('output-genre');
   let result = '';
-  if (activeTab === 'game')      result = generateGame();
-  else if (activeTab === 'animation') result = generateAnimation();
-  else if (activeTab === 'comic')     result = generateComic();
-  document.getElementById('output').value = result;
+  if (activeTab === 'game') {
+    const pack = generateGame();
+    result = pack.text;
+    if (titleBox) titleBox.value = pack.titleLine;
+    if (genreBox) genreBox.value = pack.genreCsv;
+  } else {
+    if (activeTab === 'animation') result = generateAnimation();
+    else if (activeTab === 'comic') result = generateComic();
+    if (titleBox) titleBox.value = '';
+    if (genreBox) genreBox.value = '';
+  }
+  out.value = result;
 }
 
 function clearOutput() {
   document.getElementById('output').value = '';
+  const titleBox = document.getElementById('output-title');
+  const genreBox = document.getElementById('output-genre');
+  if (titleBox) titleBox.value = '';
+  if (genreBox) genreBox.value = '';
 }
 
 function clearAll() {
@@ -2003,21 +2233,35 @@ function clearAll() {
   location.reload();
 }
 
+function flashBtnSuccess(btn, label) {
+  if (!btn) return;
+  const orig = btn.textContent;
+  btn.textContent = 'Copied!';
+  btn.classList.remove('btn-ghost');
+  btn.classList.add('btn-success');
+  setTimeout(() => {
+    btn.textContent = orig;
+    btn.classList.remove('btn-success');
+    btn.classList.add('btn-ghost');
+  }, 2000);
+}
+
 function copyOutput() {
   const out = document.getElementById('output');
   if (!out.value) return;
-  navigator.clipboard.writeText(out.value).then(() => {
-    const btn = document.getElementById('copyBtn');
-    const orig = btn.textContent;
-    btn.textContent = 'Copied!';
-    btn.classList.remove('btn-ghost');
-    btn.classList.add('btn-success');
-    setTimeout(() => {
-      btn.textContent = orig;
-      btn.classList.remove('btn-success');
-      btn.classList.add('btn-ghost');
-    }, 2000);
-  });
+  navigator.clipboard.writeText(out.value).then(() => flashBtnSuccess(document.getElementById('copyBtn')));
+}
+
+function copyTitleOutput() {
+  const el = document.getElementById('output-title');
+  if (!el || !el.value.trim()) return;
+  navigator.clipboard.writeText(el.value.trim()).then(() => flashBtnSuccess(document.getElementById('copyTitleBtn')));
+}
+
+function copyGenreOutput() {
+  const el = document.getElementById('output-genre');
+  if (!el || !el.value.trim()) return;
+  navigator.clipboard.writeText(el.value.trim()).then(() => flashBtnSuccess(document.getElementById('copyGenreBtn')));
 }
 </script>
 </body>
