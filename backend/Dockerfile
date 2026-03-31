@@ -1,5 +1,7 @@
 FROM php:8.2-apache
 
+RUN printf 'ServerName localhost\n' >> /etc/apache2/apache2.conf
+
 RUN a2enmod rewrite headers
 
 # Mirror repo layout: public → docroot, lib as sibling of public

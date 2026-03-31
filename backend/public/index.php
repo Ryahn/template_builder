@@ -17,7 +17,7 @@ if ($method === 'OPTIONS') {
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $path = rtrim($path, '/') ?: '/';
 
-if ($method === 'GET' && ($path === '/health' || $path === '')) {
+if ($method === 'GET' && ($path === '/health' || $path === '/')) {
     json_ok(['ok' => true, 'service' => 'f95template-vndb-proxy']);
 }
 

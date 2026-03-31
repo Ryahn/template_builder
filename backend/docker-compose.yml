@@ -2,4 +2,6 @@ services:
   api:
     build: .
     ports:
-      - "8080:80"
+      # IPv4 loopback only: Docker Desktop on Windows often breaks [::1]:published-port;
+      # Chrome uses IPv6 for localhost first → ERR_EMPTY_RESPONSE or long hang.
+      - "127.0.0.1:8080:80"
